@@ -1,0 +1,10 @@
+
+build/
+.vscode/
+
+callgrind.*
+perf.*
+gmon.*
+gitignore.*
+
+.gdb_history
