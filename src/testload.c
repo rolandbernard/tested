@@ -26,7 +26,9 @@ static char* readLine(FILE* file) {
         free(buffer);
         return NULL;
     } else {
-        return (char*)realloc(buffer, length + 1);
+        buffer = (char*)realloc(buffer, length + 1);
+        buffer[length] = 0;
+        return buffer;
     }
 }
 
@@ -50,13 +52,11 @@ static const char* skipToValue(const char* line) {
     }
 }
 
-static int loadInteger(const char* line, const char** end) {
-    int ret = 0;
-    while (*line != 0) {
-        if (*line >= '0' && *line <= '9') {
-            ret *= 10;
-            ret += *line - '0';
-        }
+static long loadInteger(const char* line, const char** end) {
+    long ret = 0;
+    while (*line >= '0' && *line <= '9') {
+        ret *= 10;
+        ret += *line - '0';
         line++;
     }
     if (end != NULL) {
@@ -93,7 +93,8 @@ static char* loadString(const char* line) {
 
 static void loadIntConstraints(ConstraintList* list, const char* line) {
     while (*line != 0) {
-        Constraint constr;
+        line = skipSpace(line);
+        Constraint constr = { .kind = CONSTRAIND_EQUAL };
         if (line[0] == '=') {
             line++;
             if (line[0] == '=') {
@@ -116,16 +117,18 @@ static void loadIntConstraints(ConstraintList* list, const char* line) {
             line++;
             constr.kind = CONSTRAIND_LESS;
         }
-        if (isspace(*line)) {
-            line++;
+        line = skipSpace(line);
+        if (*line >= '0' && *line <= '9') {
+            constr.value = loadInteger(line, &line);
+            insertIntConstraint(list, constr);
+        } else {
+            break;
         }
-        constr.value = loadInteger(line, &line);
-        insertConstraint(list, constr);
     }
 }
 
 static void loadStringConstraints(ConstraintList* list, const char* line) {
-    Constraint constr;
+    Constraint constr = { .kind = CONSTRAIND_COUNT };
     if (line[0] == '=') {
         line++;
         if (line[0] == '=') {
@@ -148,14 +151,18 @@ static void loadStringConstraints(ConstraintList* list, const char* line) {
         line++;
         constr.kind = CONSTRAIND_LESS;
     }
-    if (isspace(*line)) {
-        line++;
+    if (constr.kind == CONSTRAIND_COUNT) {
+        constr.kind = CONSTRAIND_EQUAL;
+    } else {
+        if (isspace(*line)) {
+            line++;
+        }
     }
     constr.string = loadString(line);
-    insertConstraint(list, constr);
+    insertStringConstraint(list, constr);
 }
 
-static void loadLine(TestCaseSettings* config, const char* line) {
+static void loadLine(TestCaseConfig* config, const char* line) {
     line = skipSpace(line);
     if (strncmp(line, "test", 4) == 0) {
         line = skipToValue(line + 4);
@@ -232,7 +239,7 @@ static const char* comment_start[] = {
     "Rem",
 };
 
-bool tryToLoadTest(TestCase* test, TestCaseSettings* def, FILE* file) {
+bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
     char* line = readLine(file);
     if (line != NULL) {
         char* actual_line = NULL;
@@ -246,8 +253,10 @@ bool tryToLoadTest(TestCase* test, TestCaseSettings* def, FILE* file) {
                 actual_line++;
             }
             if (strncmp(actual_line, "test", 4) == 0) {
+                initTestResult(&test->result);
+                copyTestConfig(&test->config, def);
                 while (actual_line != NULL) {
-                    loadLine(&test->settings, actual_line);
+                    loadLine(&test->config, actual_line);
                     free(line);
                     line = readLine(file);
                     actual_line = NULL;
@@ -262,9 +271,11 @@ bool tryToLoadTest(TestCase* test, TestCaseSettings* def, FILE* file) {
                 free(line);
                 return true;
             } else {
+                free(line);
                 return false;
             }
         } else {
+            free(line);
             return false;
         }
     } else {
@@ -272,7 +283,7 @@ bool tryToLoadTest(TestCase* test, TestCaseSettings* def, FILE* file) {
     }
 }
 
-void loadConfig(TestCaseSettings* config, FILE* file) {
+void loadConfig(TestCaseConfig* config, FILE* file) {
     char* line = readLine(file);
     while (line != NULL) {
         loadLine(config, line);

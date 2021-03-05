@@ -27,7 +27,7 @@ Constraint* getConstraint(ConstraintList* list, ConstraintKind kind) {
     return NULL;
 }
 
-void insertConstraint(ConstraintList* list, Constraint constraint) {
+void insertIntConstraint(ConstraintList* list, Constraint constraint) {
     Constraint* existing = getConstraint(list, constraint.kind);
     if (existing != NULL) {
         existing->value = constraint.value;
@@ -37,7 +37,18 @@ void insertConstraint(ConstraintList* list, Constraint constraint) {
     }
 }
 
-Constraint* testAllIntConstraints(ConstraintList* list, int value) {
+void insertStringConstraint(ConstraintList* list, Constraint constraint) {
+    Constraint* existing = getConstraint(list, constraint.kind);
+    if (existing != NULL) {
+        free(existing->string);
+        existing->string = constraint.string;
+    } else {
+        list->constraints[list->count] = constraint;
+        list->count++;
+    }
+}
+
+Constraint* testAllIntConstraints(ConstraintList* list, long value) {
     for (int i = 0; i < list->count; i++) {
         bool satisfied;
         switch (list->constraints[i].kind) {
@@ -68,7 +79,7 @@ Constraint* testAllIntConstraints(ConstraintList* list, int value) {
     return NULL;
 }
 
-int getIntConstraintMaximum(ConstraintList* list) {
+long getIntConstraintMaximum(ConstraintList* list) {
     long max = LONG_MAX;
     for (int i = 0; i < list->count; i++) {
         switch (list->constraints[i].kind) {
@@ -166,7 +177,17 @@ Constraint* testAllStringConstraints(ConstraintList* list, const char* value) {
     return NULL;
 }
 
-void freeStringConstraints(ConstraintList* list) {
+void copyStringConstraints(ConstraintList* dst, ConstraintList* src) {
+    dst->count = src->count;
+    for (int i = 0; i < src->count; i++) {
+        dst->constraints[i].kind = src->constraints[i].kind;
+        int length = strlen(src->constraints[i].string);
+        dst->constraints[i].string = (char*)malloc(length + 1);
+        memcpy(dst->constraints[i].string, src->constraints[i].string, length + 1);
+    }
+}
+
+void deinitStringConstraints(ConstraintList* list) {
     for (int i = 0; i < list->count; i++) {
         free(list->constraints[i].string);
     }

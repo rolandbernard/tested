@@ -30,16 +30,20 @@ bool includesConstraintKind(ConstraintList* list, ConstraintKind kind);
 
 Constraint* getConstraint(ConstraintList* list, ConstraintKind kind);
 
-void insertConstraint(ConstraintList* list, Constraint constraint);
+void insertIntConstraint(ConstraintList* list, Constraint constraint);
 
-Constraint* testAllIntConstraints(ConstraintList* list, int value);
+void insertStringConstraint(ConstraintList* list, Constraint constraint);
 
-int getIntConstraintMaximum(ConstraintList* list);
+Constraint* testAllIntConstraints(ConstraintList* list, long value);
+
+long getIntConstraintMaximum(ConstraintList* list);
 
 bool areIntConstraintsSatisfiable(ConstraintList* list);
 
 Constraint* testAllStringConstraints(ConstraintList* list, const char* value);
 
-void freeStringConstraints(ConstraintList* list);
+void copyStringConstraints(ConstraintList* dst, ConstraintList* src);
+
+void deinitStringConstraints(ConstraintList* list);
 
 #endif

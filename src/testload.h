@@ -5,8 +5,8 @@
 
 #include "testcase.h"
 
-bool tryToLoadTest(TestCase* test, TestCaseSettings* def, FILE* file);
+bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file);
 
-void loadConfig(TestCaseSettings* config, FILE* file);
+void loadConfig(TestCaseConfig* config, FILE* file);
 
 #endif

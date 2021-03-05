@@ -8,7 +8,7 @@
 typedef struct {
     char* name;
     // instructions
-    int run_count;
+    long run_count;
     char* build_command;
     char* run_command;
     char* cleanup_command;
@@ -21,32 +21,40 @@ typedef struct {
     ConstraintList exit;
     ConstraintList err;
     ConstraintList out;
-} TestCaseSettings;
+} TestCaseConfig;
 
 typedef struct {
     bool unsatisfiable;
     bool failed_build;
     bool failed_cleanup;
-    int buildtime;
+    long buildtime;
     bool out_of_buildtime;
-    int runtime;
+    long runtime;
     bool out_of_runtime;
-    int time;
+    long time;
     bool out_of_time;
-    int cputime;
+    long cputime;
     bool out_of_cputime;
-    int exit;
+    long exit;
     char* err;
     char* out;
 } TestCaseResult;
 
 typedef struct {
-    TestCaseSettings settings;
+    TestCaseConfig config;
     TestCaseResult result;
 } TestCase;
 
 void runTest(TestCase* test);
 
-void freeTest(TestCase* test);
+void initTestResult(TestCaseResult* result);
+
+void initTestConfig(TestCaseConfig* test);
+
+void copyTestConfig(TestCaseConfig* dst, TestCaseConfig* src);
+
+void deinitTestConfig(TestCaseConfig* test);
+
+void deinitTest(TestCase* test);
 
 #endif
