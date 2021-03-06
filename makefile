@@ -40,7 +40,7 @@ LDFLAGS.release := -O3
 
 CCFLAGS  := $(CCFLAGS.$(BUILD)) -I$(SOURCE_DIR) 
 LDFLAGS  := $(LDFLAGS.$(BUILD)) -rdynamic
-LIBS     := -lm -lpthread -ldl
+LIBS     := -lpthread
 # ==
 
 # == Progress

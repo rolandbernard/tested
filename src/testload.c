@@ -92,6 +92,14 @@ static char* loadString(const char* line) {
     return ret;
 }
 
+static bool loadBoolean(const char* line) {
+    if (strncasecmp(line, "true", 4) == 0 || strncasecmp(line, "yes", 3) == 0 || strncasecmp(line, "on", 2) == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static void loadIntConstraints(ConstraintList* list, const char* line) {
     while (*line != 0) {
         line = skipSpace(line);
@@ -234,6 +242,11 @@ static void loadLine(TestCaseConfig* config, const char* line) {
         line = skipToValue(line + 6);
         if (line != NULL) {
             loadStringConstraints(&config->out, line);
+        }
+    } else if (strncmp(line, "timesout", 8) == 0) {
+        line = skipToValue(line + 8);
+        if (line != NULL) {
+            config->times_out = loadBoolean(line);
         }
     }
 }

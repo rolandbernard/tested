@@ -12,32 +12,6 @@
 #include "testload.h"
 #include "util.h"
 
-#define INITIAL_TEST_LIST_CAPACITY 32
-
-void initTestList(TestList* tests) {
-    tests->tests = NULL;
-    tests->count = 0;
-    tests->capacity = 0;
-}
-
-void deinitTestList(TestList* tests) {
-    for (int i = 0; i < tests->count; i++) {
-        deinitTest(&tests->tests[i]);
-    }
-    free(tests->tests);
-}
-
-static void makeSpaceInTestList(TestList* tests) {
-    if (tests->count == tests->capacity) {
-        if (tests->capacity == 0) {
-            tests->capacity = INITIAL_TEST_LIST_CAPACITY;
-        } else {
-            tests->capacity *= 2;
-        }
-        tests->tests = (TestCase*)realloc(tests->tests, sizeof(TestCase) * tests->capacity);
-    }
-}
-
 static void searchForDefaultSettings(const char* dir, TestCaseConfig* config) {
     int length = strlen(dir);
     char path[length + 20];
@@ -45,7 +19,6 @@ static void searchForDefaultSettings(const char* dir, TestCaseConfig* config) {
     memcpy(path + length, "/tested.default", 16);
     FILE* file = fopen(path, "r");
     if (file != NULL) {
-        fprintf(stderr, "config: %s\n", path);
         loadConfig(config, file);
         fclose(file);
     }
@@ -83,7 +56,6 @@ void recursiveTestSearch(TestList* tests, const char* dir, TestCaseConfig* def) 
                 makeSpaceInTestList(tests);
                 if (tryToLoadTest(&tests->tests[tests->count], def, file)) {
                     tests->tests[tests->count].path = copyString(dir);
-                    fprintf(stderr, "test: %s: %s\n", tests->tests[tests->count].path, tests->tests[tests->count].config.name);
                     tests->count++;
                 }
                 fclose(file);

@@ -1,5 +1,5 @@
-#ifndef _TESTRUN_H_
-#define _TESTRUN_H_
+#ifndef _TESTCASE_H_
+#define _TESTCASE_H_
 
 #include <stdbool.h>
 
@@ -14,6 +14,7 @@ typedef struct {
     char* cleanup_command;
     char* in;
     // constraints
+    bool times_out;
     ConstraintList buildtime;
     ConstraintList buildcputime;
     ConstraintList time;
@@ -46,7 +47,17 @@ typedef struct {
     TestCaseResult result;
 } TestCase;
 
-void runTest(TestCase* test);
+typedef struct {
+    TestCase* tests;
+    int count;
+    int capacity;
+} TestList;
+
+void initTestList(TestList* tests);
+
+void makeSpaceInTestList(TestList* tests);
+
+void deinitTestList(TestList* tests);
 
 void initTestResult(TestCaseResult* result);
 

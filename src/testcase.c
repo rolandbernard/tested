@@ -7,22 +7,18 @@
 
 #include "util.h"
 
-void runTest(TestCase* test) {
-
-}
-
 void initTestResult(TestCaseResult* result) {
     result->err = NULL;
     result->out = NULL;
 }
 
 void initTestConfig(TestCaseConfig* test) {
-    test->name = "";
+    test->name = copyString("");
     test->run_count = 1;
-    test->build_command = "";
-    test->run_command = "";
-    test->cleanup_command = "";
-    test->in = "";
+    test->build_command = copyString("");
+    test->run_command = copyString("");
+    test->cleanup_command = copyString("");
+    test->in = copyString("");
     test->buildtime.count = 0;
     test->buildcputime.count = 0;
     test->time.count = 0;
@@ -58,4 +54,30 @@ void deinitTest(TestCase* test) {
     deinitTestConfig(&test->config);
     free(test->result.err);
     free(test->result.out);
+}
+
+#define INITIAL_TEST_LIST_CAPACITY 32
+
+void initTestList(TestList* tests) {
+    tests->tests = NULL;
+    tests->count = 0;
+    tests->capacity = 0;
+}
+
+void deinitTestList(TestList* tests) {
+    for (int i = 0; i < tests->count; i++) {
+        deinitTest(&tests->tests[i]);
+    }
+    free(tests->tests);
+}
+
+void makeSpaceInTestList(TestList* tests) {
+    if (tests->count == tests->capacity) {
+        if (tests->capacity == 0) {
+            tests->capacity = INITIAL_TEST_LIST_CAPACITY;
+        } else {
+            tests->capacity *= 2;
+        }
+        tests->tests = (TestCase*)realloc(tests->tests, sizeof(TestCase) * tests->capacity);
+    }
 }
