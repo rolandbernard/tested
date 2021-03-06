@@ -3,4 +3,6 @@
 
 char* copyString(const char* str);
 
+long min(long a, long b);
+
 #endif

@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
     initTestList(&tests);
     TestCaseConfig def;
     initTestConfig(&def);
-    recursiveTestSearch(&tests, "./gitignore.examples", &def);
+    recursiveTestSearch(&tests, argv[1], &def);
     deinitTestConfig(&def);
     runTests(&tests, 1);
     printAllTestResults(&tests, stdout);

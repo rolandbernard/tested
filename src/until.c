@@ -10,3 +10,7 @@ char* copyString(const char* str) {
     memcpy(ret, str, length + 1);
     return ret;
 }
+
+long min(long a, long b) {
+    return a < b ? a : b;
+}

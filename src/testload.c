@@ -66,6 +66,59 @@ static long loadInteger(const char* line, const char** end) {
     return ret;
 }
 
+static long loadTime(const char* line, const char** end) {
+    const char* num_end;
+    int value = loadInteger(line, &num_end);
+    num_end = skipSpace(num_end);
+    if (*num_end == 's' || *num_end == 'S') {
+        value *= 1000000;
+        num_end++;
+    } else {
+        if (*num_end == 'm' || *num_end == 'M') {
+            value *= 1000;
+            num_end++;
+        } else if (*num_end == 'u' || *num_end == 'U') {
+            num_end++;
+        }
+        if (*num_end == 's' || *num_end == 'S') {
+            num_end++;
+        }
+    }
+    *end = num_end;
+    return value;
+}
+
+static long loadMemory(const char* line, const char** end) {
+    const char* num_end;
+    int value = loadInteger(line, &num_end);
+    num_end = skipSpace(num_end);
+    if (*num_end == 'b' || *num_end == 'B') {
+        num_end++;
+    } else {
+        if (*num_end == 'k' || *num_end == 'K') {
+            value *= 1000;
+            num_end++;
+        } else if (*num_end == 'm' || *num_end == 'M') {
+            value *= 1000000;
+            num_end++;
+        } else if (*num_end == 'g' || *num_end == 'G') {
+            value *= 1000000000;
+            num_end++;
+        } else if (*num_end == 't' || *num_end == 'T') {
+            value *= 1000000000000;
+            num_end++;
+        } else if (*num_end == 'p' || *num_end == 'P') {
+            value *= 1000000000000000;
+            num_end++;
+        }
+        if (*num_end == 'b' || *num_end == 'B') {
+            num_end++;
+        }
+    }
+    *end = num_end;
+    return value;
+}
+
 static char* loadString(const char* line) {
     char* ret = (char*)malloc(strlen(line) + 1);
     int len = 0;
@@ -129,6 +182,42 @@ static void loadIntConstraints(ConstraintList* list, const char* line) {
         line = skipSpace(line);
         if (*line >= '0' && *line <= '9') {
             constr.value = loadInteger(line, &line);
+            insertIntConstraint(list, constr);
+        } else {
+            break;
+        }
+    }
+}
+
+static void loadTimeConstraints(ConstraintList* list, const char* line) {
+    while (*line != 0) {
+        line = skipSpace(line);
+        Constraint constr = { .kind = CONSTRAIND_EQUAL };
+        if (line[0] == '=') {
+            line++;
+            if (line[0] == '=') {
+                line++;
+            }
+            constr.kind = CONSTRAIND_EQUAL;
+        } else if (line[0] == '!' && line[1] == '=') {
+            line += 2;
+            constr.kind = CONSTRAIND_UNEQUAL;
+        } else if (line[0] == '>' && line[1] == '=') {
+            line += 2;
+            constr.kind = CONSTRAIND_MORE_EQUAL;
+        } else if (line[0] == '>') {
+            line++;
+            constr.kind = CONSTRAIND_MORE;
+        } else if (line[0] == '<' && line[1] == '=') {
+            line += 2;
+            constr.kind = CONSTRAIND_LESS_EQUAL;
+        } else if (line[0] == '<') {
+            line++;
+            constr.kind = CONSTRAIND_LESS;
+        }
+        line = skipSpace(line);
+        if (*line >= '0' && *line <= '9') {
+            constr.value = loadTime(line, &line);
             insertIntConstraint(list, constr);
         } else {
             break;
@@ -211,22 +300,22 @@ static void loadLine(TestCaseConfig* config, const char* line) {
     } else if (strncmp(line, "buildtime", 9) == 0) {
         line = skipToValue(line + 9);
         if (line != NULL) {
-            loadIntConstraints(&config->buildtime, line);
+            loadTimeConstraints(&config->buildtime, line);
         }
     } else if (strncmp(line, "buildcputime", 12) == 0) {
         line = skipToValue(line + 12);
         if (line != NULL) {
-            loadIntConstraints(&config->buildcputime, line);
+            loadTimeConstraints(&config->buildcputime, line);
         }
     } else if (strncmp(line, "time", 4) == 0) {
         line = skipToValue(line + 4);
         if (line != NULL) {
-            loadIntConstraints(&config->time, line);
+            loadTimeConstraints(&config->time, line);
         }
     } else if (strncmp(line, "cputime", 7) == 0) {
         line = skipToValue(line + 7);
         if (line != NULL) {
-            loadIntConstraints(&config->cputime, line);
+            loadTimeConstraints(&config->cputime, line);
         }
     } else if (strncmp(line, "exit", 4) == 0) {
         line = skipToValue(line + 4);
