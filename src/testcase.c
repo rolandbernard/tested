@@ -5,6 +5,8 @@
 
 #include "testcase.h"
 
+#include "util.h"
+
 void runTest(TestCase* test) {
 
 }
@@ -30,13 +32,6 @@ void initTestConfig(TestCaseConfig* test) {
     test->out.count = 0;
 }
 
-static char* copyString(const char* str) {
-    int length = strlen(str);
-    char* ret = (char*)malloc(length + 1);
-    memcpy(ret, str, length + 1);
-    return ret;
-}
-
 void copyTestConfig(TestCaseConfig* dst, TestCaseConfig* src) {
     *dst = *src;
     dst->name = copyString(src->name);
@@ -59,6 +54,7 @@ void deinitTestConfig(TestCaseConfig* test) {
 }
 
 void deinitTest(TestCase* test) {
+    free(test->path);
     deinitTestConfig(&test->config);
     free(test->result.err);
     free(test->result.out);

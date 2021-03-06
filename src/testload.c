@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>  
 #include <string.h>  
+#include <strings.h>  
 #include <ctype.h>  
 
 #include "testload.h"
@@ -167,6 +168,7 @@ static void loadLine(TestCaseConfig* config, const char* line) {
     if (strncmp(line, "test", 4) == 0) {
         line = skipToValue(line + 4);
         if (line != NULL) {
+            free(config->name);
             config->name = loadString(line);
         }
     } else if (strncmp(line, "runs", 4) == 0) {
@@ -177,22 +179,26 @@ static void loadLine(TestCaseConfig* config, const char* line) {
     } else if (strncmp(line, "build", 5) == 0) {
         line = skipToValue(line + 5);
         if (line != NULL) {
-            config->run_count = loadInteger(line, NULL);
+            free(config->build_command);
+            config->build_command = loadString(line);
         }
     } else if (strncmp(line, "run", 3) == 0) {
         line = skipToValue(line + 3);
         if (line != NULL) {
-            config->run_count = loadInteger(line, NULL);
+            free(config->run_command);
+            config->run_command = loadString(line);
         }
     } else if (strncmp(line, "cleanup", 7) == 0) {
         line = skipToValue(line + 7);
         if (line != NULL) {
-            config->run_count = loadInteger(line, NULL);
+            free(config->cleanup_command);
+            config->cleanup_command = loadString(line);
         }
     } else if (strncmp(line, "stdin", 5) == 0) {
         line = skipToValue(line + 5);
         if (line != NULL) {
-            config->run_count = loadInteger(line, NULL);
+            free(config->in);
+            config->in = loadString(line);
         }
     } else if (strncmp(line, "buildtime", 9) == 0) {
         line = skipToValue(line + 9);
@@ -236,7 +242,7 @@ static const char* comment_start[] = {
     "//",
     "#",
     ";",
-    "Rem",
+    "REM",
 };
 
 bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
@@ -244,7 +250,7 @@ bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
     if (line != NULL) {
         char* actual_line = NULL;
         for (int i = 0; actual_line == NULL && i < sizeof(comment_start)/sizeof(comment_start[0]); i++) {
-            if (strncmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
+            if (strncasecmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
                 actual_line = line + strlen(comment_start[i]);
             }
         }

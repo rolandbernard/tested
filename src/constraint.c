@@ -5,6 +5,8 @@
 
 #include "constraint.h"
 
+#include "util.h"
+
 bool includesConstraintKind(ConstraintList* list, ConstraintKind kind) {
     if (list->count == CONSTRAIND_COUNT) {
         return true;
@@ -181,9 +183,7 @@ void copyStringConstraints(ConstraintList* dst, ConstraintList* src) {
     dst->count = src->count;
     for (int i = 0; i < src->count; i++) {
         dst->constraints[i].kind = src->constraints[i].kind;
-        int length = strlen(src->constraints[i].string);
-        dst->constraints[i].string = (char*)malloc(length + 1);
-        memcpy(dst->constraints[i].string, src->constraints[i].string, length + 1);
+        dst->constraints[i].string = copyString(src->constraints[i].string);
     }
 }
 

@@ -41,6 +41,7 @@ typedef struct {
 } TestCaseResult;
 
 typedef struct {
+    char* path;
     TestCaseConfig config;
     TestCaseResult result;
 } TestCase;
