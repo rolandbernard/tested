@@ -174,11 +174,10 @@ void runTest(TestCase* test) {
                     test->result.failed_build = true;
                     test->result.failed = true;
                 }
-            } else if (testAllIntConstraints(&test->config.buildtime, test->result.buildtime) != NULL) {
-                test->result.failed_build = true;
-                test->result.failed = true;
-            }
-            if (test->result.buildexit != 0 || test->result.buildsignal != 0) {
+            } else if (
+                testAllIntConstraints(&test->config.buildtime, test->result.buildtime) != NULL
+                || test->result.buildexit != 0 || test->result.buildsignal != 0
+            ) {
                 test->result.failed_build = true;
                 test->result.failed = true;
             }
@@ -192,6 +191,8 @@ void runTest(TestCase* test) {
                     timeout = -1;
                 }
                 char* command = fillFileNamePattern(test->config.run_command, test->path);
+                free(test->result.err);
+                free(test->result.out);
                 runTimedCommand(
                     command, timeout,
                     &test->result.runtime, &test->result.out_of_runtime,
@@ -203,11 +204,9 @@ void runTest(TestCase* test) {
                     if (!test->result.out_of_runtime) {
                         test->result.failed = true;
                     }
-                } else if (testAllIntConstraints(&test->config.time, test->result.runtime) != NULL) {
-                    test->result.failed = true;
-                }
-                if (
-                    testAllIntConstraints(&test->config.exit, test->result.exit) != NULL
+                } else if (
+                    testAllIntConstraints(&test->config.time, test->result.runtime) != NULL
+                    || testAllIntConstraints(&test->config.exit, test->result.exit) != NULL
                     || testAllStringConstraints(&test->config.err, test->result.err) != NULL
                     || testAllStringConstraints(&test->config.out, test->result.out) != NULL
                 ) {
@@ -250,6 +249,7 @@ void runTests(TestList* tests, int jobs, bool progress) {
         test_runners[i].id = i;
         test_runners[i].num_jobs = jobs;
         test_runners[i].tests = tests;
+        test_runners[i].finished = false;
     }
     for (int i = 0; i < jobs; i++) {
         pthread_create(&test_runners[i].thread, NULL, testRunner, &test_runners[i]);

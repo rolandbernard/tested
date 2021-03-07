@@ -48,13 +48,6 @@ void printTestResult(TestCase* test, FILE* output) {
         if (test->result.unsatisfiable) {
             fprintf(stderr, "--> the constraints are not satisfiable\n");
         }
-        if (test->result.failed_build) {
-            if (test->result.buildexit != 0) {
-                fprintf(stderr, "--> build failed with non zero exit code %i\n", test->result.buildexit);
-            } else {
-                fprintf(stderr, "--> build terminated with signal %s\n", strsignal(test->result.buildsignal));
-            }
-        }
         if (test->result.failed_cleanup) {
             if (test->result.buildexit != 0) {
                 fprintf(stderr, "--> cleanup failed with non zero exit code %i\n", test->result.cleanupexit);
@@ -69,11 +62,20 @@ void printTestResult(TestCase* test, FILE* output) {
                 stderr, "--> build was killed after %lgs, but expected %s %lgs\n",
                 test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6
             );
-        } else if (constr != NULL) {
-            fprintf(
-                stderr, "--> build took %lgs, but expected %s %lgs\n",
-                test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6
-            );
+        } else {
+            if (constr != NULL) {
+                fprintf(
+                    stderr, "--> build took %lgs, but expected %s %lgs\n",
+                    test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6
+                );
+            }
+            if (test->result.failed_build) {
+                if (test->result.buildexit != 0) {
+                    fprintf(stderr, "--> build failed with non zero exit code %i\n", test->result.buildexit);
+                } else {
+                    fprintf(stderr, "--> build terminated with signal %s\n", strsignal(test->result.buildsignal));
+                }
+            }
         }
         constr = testAllIntConstraints(&test->config.time, test->result.runtime);
         if (test->result.out_of_runtime) {
@@ -81,26 +83,28 @@ void printTestResult(TestCase* test, FILE* output) {
                 stderr, "--> run killed after %lgs, but expected %s %lgs\n",
                 test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6
             );
-        } else if (constr != NULL) {
-            fprintf(
-                stderr, "--> run took %lgs, but expected %s %lgs\n",
-                test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6
-            );
-        }
-        constr = testAllIntConstraints(&test->config.exit, test->result.exit);
-        if (constr != NULL) {
-            fprintf(
-                stderr, "--> run exited with %i, but expected %s %li\n",
-                test->result.exit, getConstraintStr(constr->kind), constr->value
-            );
-        }
-        constr = testAllStringConstraints(&test->config.err, test->result.err);
-        if (constr != NULL) {
-            fprintf(stderr, "--> stderr is not as expected\n");
-        }
-        constr = testAllStringConstraints(&test->config.out, test->result.out);
-        if (constr != NULL) {
-            fprintf(stderr, "--> stdout is not as expected\n");
+        } else {
+            if (constr != NULL) {
+                fprintf(
+                    stderr, "--> run took %lgs, but expected %s %lgs\n",
+                    test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6
+                );
+            }
+            constr = testAllIntConstraints(&test->config.exit, test->result.exit);
+            if (constr != NULL) {
+                fprintf(
+                    stderr, "--> run exited with %i, but expected %s %li\n",
+                    test->result.exit, getConstraintStr(constr->kind), constr->value
+                );
+            }
+            constr = testAllStringConstraints(&test->config.err, test->result.err);
+            if (constr != NULL) {
+                fprintf(stderr, "--> stderr is not as expected\n");
+            }
+            constr = testAllStringConstraints(&test->config.out, test->result.out);
+            if (constr != NULL) {
+                fprintf(stderr, "--> stdout is not as expected\n");
+            }
         }
         fputc('\n', output);
     }
