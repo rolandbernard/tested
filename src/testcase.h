@@ -14,17 +14,17 @@ typedef struct {
     char* cleanup_command;
     char* in;
     // constraints
+    bool times_out_build;
     bool times_out;
     ConstraintList buildtime;
-    ConstraintList buildcputime;
     ConstraintList time;
-    ConstraintList cputime;
     ConstraintList exit;
     ConstraintList err;
     ConstraintList out;
 } TestCaseConfig;
 
 typedef struct {
+    bool completed;
     bool unsatisfiable;
     bool failed_build;
     bool failed_cleanup;
@@ -32,10 +32,6 @@ typedef struct {
     bool out_of_buildtime;
     long runtime;
     bool out_of_runtime;
-    long time;
-    bool out_of_time;
-    long cputime;
-    bool out_of_cputime;
     long exit;
     char* err;
     char* out;

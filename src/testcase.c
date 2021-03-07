@@ -8,6 +8,15 @@
 #include "util.h"
 
 void initTestResult(TestCaseResult* result) {
+    result->completed = false;
+    result->unsatisfiable = false;
+    result->failed_build = false;
+    result->failed_cleanup = false;
+    result->buildtime = 0;
+    result->out_of_buildtime = false;
+    result->runtime = 0;
+    result->out_of_runtime = false;
+    result->exit = 0;
     result->err = NULL;
     result->out = NULL;
 }
@@ -20,9 +29,7 @@ void initTestConfig(TestCaseConfig* test) {
     test->cleanup_command = copyString("");
     test->in = copyString("");
     test->buildtime.count = 0;
-    test->buildcputime.count = 0;
     test->time.count = 0;
-    test->cputime.count = 0;
     test->exit.count = 0;
     test->err.count = 0;
     test->out.count = 0;
