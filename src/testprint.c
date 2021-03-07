@@ -74,7 +74,7 @@ void printTestResult(TestCase* test, FILE* output) {
             constr = testAllIntConstraints(&test->config.time, test->result.runtime);
             if (test->result.out_of_runtime) {
                 fprintf(stderr, "--> run killed after %lgs, but expected %s %lgs\n", test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
-            } else {
+            } else if (!test->result.failed_build) {
                 if (constr != NULL) {
                     fprintf(stderr, "--> run took %lgs, but expected %s %lgs\n", test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
                 }
