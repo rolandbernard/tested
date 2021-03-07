@@ -88,37 +88,6 @@ static long loadTime(const char* line, const char** end) {
     return value;
 }
 
-static long loadMemory(const char* line, const char** end) {
-    const char* num_end;
-    int value = loadInteger(line, &num_end);
-    num_end = skipSpace(num_end);
-    if (*num_end == 'b' || *num_end == 'B') {
-        num_end++;
-    } else {
-        if (*num_end == 'k' || *num_end == 'K') {
-            value *= 1000;
-            num_end++;
-        } else if (*num_end == 'm' || *num_end == 'M') {
-            value *= 1000000;
-            num_end++;
-        } else if (*num_end == 'g' || *num_end == 'G') {
-            value *= 1000000000;
-            num_end++;
-        } else if (*num_end == 't' || *num_end == 'T') {
-            value *= 1000000000000;
-            num_end++;
-        } else if (*num_end == 'p' || *num_end == 'P') {
-            value *= 1000000000000000;
-            num_end++;
-        }
-        if (*num_end == 'b' || *num_end == 'B') {
-            num_end++;
-        }
-    }
-    *end = num_end;
-    return value;
-}
-
 static char* loadString(const char* line) {
     char* ret = (char*)malloc(strlen(line) + 1);
     int len = 0;
@@ -302,20 +271,10 @@ static void loadLine(TestCaseConfig* config, const char* line) {
         if (line != NULL) {
             loadTimeConstraints(&config->buildtime, line);
         }
-    } else if (strncmp(line, "buildcputime", 12) == 0) {
-        line = skipToValue(line + 12);
-        if (line != NULL) {
-            loadTimeConstraints(&config->buildcputime, line);
-        }
     } else if (strncmp(line, "time", 4) == 0) {
         line = skipToValue(line + 4);
         if (line != NULL) {
             loadTimeConstraints(&config->time, line);
-        }
-    } else if (strncmp(line, "cputime", 7) == 0) {
-        line = skipToValue(line + 7);
-        if (line != NULL) {
-            loadTimeConstraints(&config->cputime, line);
         }
     } else if (strncmp(line, "exit", 4) == 0) {
         line = skipToValue(line + 4);
@@ -337,6 +296,11 @@ static void loadLine(TestCaseConfig* config, const char* line) {
         if (line != NULL) {
             config->times_out = loadBoolean(line);
         }
+    } else if (strncmp(line, "buildtimesout", 13) == 0) {
+        line = skipToValue(line + 13);
+        if (line != NULL) {
+            config->times_out_build = loadBoolean(line);
+        }
     }
 }
 
@@ -351,7 +315,7 @@ bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
     char* line = readLine(file);
     if (line != NULL) {
         char* actual_line = NULL;
-        for (int i = 0; actual_line == NULL && i < sizeof(comment_start)/sizeof(comment_start[0]); i++) {
+        for (int i = 0; actual_line == NULL && i < (int)(sizeof(comment_start)/sizeof(comment_start[0])); i++) {
             if (strncasecmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
                 actual_line = line + strlen(comment_start[i]);
             }
@@ -369,7 +333,7 @@ bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
                     line = readLine(file);
                     actual_line = NULL;
                     if (line != NULL) {
-                        for (int i = 0; actual_line == NULL && i < sizeof(comment_start)/sizeof(comment_start[0]); i++) {
+                        for (int i = 0; actual_line == NULL && i < (int)(sizeof(comment_start)/sizeof(comment_start[0])); i++) {
                             if (strncmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
                                 actual_line = line + strlen(comment_start[i]);
                             }

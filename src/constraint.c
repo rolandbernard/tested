@@ -52,7 +52,7 @@ void insertStringConstraint(ConstraintList* list, Constraint constraint) {
 
 Constraint* testAllIntConstraints(ConstraintList* list, long value) {
     for (int i = 0; i < list->count; i++) {
-        bool satisfied;
+        bool satisfied = true;
         switch (list->constraints[i].kind) {
         case CONSTRAIND_EQUAL:
             satisfied = (value == list->constraints[i].value);
