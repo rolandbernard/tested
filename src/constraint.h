@@ -40,6 +40,8 @@ long getIntConstraintMaximum(ConstraintList* list);
 
 bool areIntConstraintsSatisfiable(ConstraintList* list);
 
+bool areStringConstraintsSatisfiable(ConstraintList* list);
+
 Constraint* testAllStringConstraints(ConstraintList* list, const char* value);
 
 void copyStringConstraints(ConstraintList* dst, ConstraintList* src);

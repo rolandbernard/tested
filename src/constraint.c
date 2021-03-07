@@ -31,7 +31,15 @@ Constraint* getConstraint(ConstraintList* list, ConstraintKind kind) {
 
 void insertIntConstraint(ConstraintList* list, Constraint constraint) {
     Constraint* existing = getConstraint(list, constraint.kind);
+    if (existing == NULL) {
+        if (constraint.kind == CONSTRAIND_UNEQUAL) {
+            existing = getConstraint(list, CONSTRAIND_EQUAL);
+        } else if (constraint.kind == CONSTRAIND_EQUAL) {
+            existing = getConstraint(list, CONSTRAIND_UNEQUAL);
+        }
+    }
     if (existing != NULL) {
+        existing->kind = constraint.kind;
         existing->value = constraint.value;
     } else {
         list->constraints[list->count] = constraint;
@@ -41,8 +49,16 @@ void insertIntConstraint(ConstraintList* list, Constraint constraint) {
 
 void insertStringConstraint(ConstraintList* list, Constraint constraint) {
     Constraint* existing = getConstraint(list, constraint.kind);
+    if (existing == NULL) {
+        if (constraint.kind == CONSTRAIND_UNEQUAL) {
+            existing = getConstraint(list, CONSTRAIND_EQUAL);
+        } else if (constraint.kind == CONSTRAIND_EQUAL) {
+            existing = getConstraint(list, CONSTRAIND_UNEQUAL);
+        }
+    }
     if (existing != NULL) {
         free(existing->string);
+        existing->kind = constraint.kind;
         existing->string = constraint.string;
     } else {
         list->constraints[list->count] = constraint;
@@ -146,6 +162,44 @@ bool areIntConstraintsSatisfiable(ConstraintList* list) {
         }
     }
     return max >= min && (!unequal || max != min || max != cannot_be);
+}
+
+bool areStringConstraintsSatisfiable(ConstraintList* list) {
+    const char* min = NULL;
+    const char* max = NULL;
+    const char* cannot_be = 0;
+    bool unequal = false;
+    for (int i = 0; i < list->count; i++) {
+        const char* value = list->constraints[i].string;
+        switch (list->constraints[i].kind) {
+        case CONSTRAIND_EQUAL:
+            if (min == NULL || strcmp(value, min) > 0) {
+                min = value;
+            }
+            if (max == NULL || strcmp(value, max) < 0) {
+                max = value;
+            }
+            break;
+        case CONSTRAIND_UNEQUAL:
+            cannot_be = value;
+            unequal = true;
+            break;
+        case CONSTRAIND_LESS:
+        case CONSTRAIND_LESS_EQUAL:
+            if (max == NULL || strcmp(value, max) < 0) {
+                max = value;
+            }
+            break;
+        case CONSTRAIND_MORE:
+        case CONSTRAIND_MORE_EQUAL:
+            if (min == NULL || strcmp(value, min) > 0) {
+                min = value;
+            }
+            break;
+        default: break;
+        }
+    }
+    return min == NULL || max == NULL || (strcmp(max, min) >= 0 && (!unequal || strcmp(max, min) != 0 || strcmp(max, cannot_be) != 0));
 }
 
 Constraint* testAllStringConstraints(ConstraintList* list, const char* value) {

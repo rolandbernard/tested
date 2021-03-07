@@ -54,6 +54,7 @@ static const char* skipToValue(const char* line) {
 }
 
 static long loadInteger(const char* line, const char** end) {
+    line = skipSpace(line);
     long ret = 0;
     while (*line >= '0' && *line <= '9') {
         ret *= 10;
@@ -67,6 +68,7 @@ static long loadInteger(const char* line, const char** end) {
 }
 
 static long loadTime(const char* line, const char** end) {
+    line = skipSpace(line);
     const char* num_end;
     int value = loadInteger(line, &num_end);
     num_end = skipSpace(num_end);
@@ -115,6 +117,7 @@ static char* loadString(const char* line) {
 }
 
 static bool loadBoolean(const char* line) {
+    line = skipSpace(line);
     if (strncasecmp(line, "true", 4) == 0 || strncasecmp(line, "yes", 3) == 0 || strncasecmp(line, "on", 2) == 0) {
         return true;
     } else {
@@ -266,6 +269,16 @@ static void loadLine(TestCaseConfig* config, const char* line) {
             free(config->in);
             config->in = loadString(line);
         }
+    } else if (strncmp(line, "timesout", 8) == 0) {
+        line = skipToValue(line + 8);
+        if (line != NULL) {
+            config->times_out = loadBoolean(line);
+        }
+    } else if (strncmp(line, "buildtimesout", 13) == 0) {
+        line = skipToValue(line + 13);
+        if (line != NULL) {
+            config->times_out_build = loadBoolean(line);
+        }
     } else if (strncmp(line, "buildtime", 9) == 0) {
         line = skipToValue(line + 9);
         if (line != NULL) {
@@ -291,16 +304,6 @@ static void loadLine(TestCaseConfig* config, const char* line) {
         if (line != NULL) {
             loadStringConstraints(&config->out, line);
         }
-    } else if (strncmp(line, "timesout", 8) == 0) {
-        line = skipToValue(line + 8);
-        if (line != NULL) {
-            config->times_out = loadBoolean(line);
-        }
-    } else if (strncmp(line, "buildtimesout", 13) == 0) {
-        line = skipToValue(line + 13);
-        if (line != NULL) {
-            config->times_out_build = loadBoolean(line);
-        }
     }
 }
 
@@ -314,16 +317,14 @@ static const char* comment_start[] = {
 bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
     char* line = readLine(file);
     if (line != NULL) {
-        char* actual_line = NULL;
+        const char* actual_line = NULL;
         for (int i = 0; actual_line == NULL && i < (int)(sizeof(comment_start)/sizeof(comment_start[0])); i++) {
             if (strncasecmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
                 actual_line = line + strlen(comment_start[i]);
             }
         }
         if (actual_line != NULL) {
-            while (isspace(actual_line[0])) {
-                actual_line++;
-            }
+            actual_line = skipSpace(actual_line);
             if (strncmp(actual_line, "test", 4) == 0) {
                 initTestResult(&test->result);
                 copyTestConfig(&test->config, def);
@@ -334,7 +335,7 @@ bool tryToLoadTest(TestCase* test, TestCaseConfig* def, FILE* file) {
                     actual_line = NULL;
                     if (line != NULL) {
                         for (int i = 0; actual_line == NULL && i < (int)(sizeof(comment_start)/sizeof(comment_start[0])); i++) {
-                            if (strncmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
+                            if (strncasecmp(comment_start[i], line, strlen(comment_start[i])) == 0) {
                                 actual_line = line + strlen(comment_start[i]);
                             }
                         }

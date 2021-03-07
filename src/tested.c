@@ -11,8 +11,8 @@ int main(int argc, char** argv) {
     initTestConfig(&def);
     recursiveTestSearch(&tests, argv[1], &def);
     deinitTestConfig(&def);
-    runTests(&tests, 1);
-    printAllTestResults(&tests, stdout);
+    runTests(&tests, 1, true);
+    printTestResults(&tests, stdout);
     deinitTestList(&tests);
     return 0;
 }

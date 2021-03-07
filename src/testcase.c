@@ -31,6 +31,8 @@ void initTestConfig(TestCaseConfig* test) {
     test->cleanup_command = copyString("");
     test->in = copyString("");
     test->buildtime.count = 0;
+    test->times_out = false;
+    test->times_out_build = false;
     test->time.count = 0;
     test->exit.count = 0;
     test->err.count = 0;

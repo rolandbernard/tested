@@ -5,8 +5,10 @@
 
 #include "testcase.h"
 
-void printTestResults(TestCase* test, FILE* output);
+void printTestResult(TestCase* test, FILE* output);
 
-void printAllTestResults(TestList* tests, FILE* output);
+void printTestResults(TestList* tests, FILE* output);
+
+void printTestSummary(TestList* tests, FILE* output);
 
 #endif

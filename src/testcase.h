@@ -28,7 +28,11 @@ typedef struct {
     bool failed;
     bool unsatisfiable;
     bool failed_build;
+    int buildexit;
+    int buildsignal;
     bool failed_cleanup;
+    int cleanupexit;
+    int cleanupsignal;
     long buildtime;
     bool out_of_buildtime;
     long runtime;

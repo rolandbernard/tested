@@ -15,6 +15,7 @@
 
 #include "testrun.h"
 
+#include "testprint.h"
 #include "util.h"
 
 static char* fillFileNamePattern(const char* command, const char* path) {
@@ -79,14 +80,8 @@ static void runTimedCommand(
     const char* command, long timeout, long* elapsed, bool* timedout,
     int* exitc, int* termsig, const char* in, char** err, char** out
 ) {
-    struct timespec sleep;
-    if (timeout >= 0) {
-        sleep.tv_sec = timeout / 1000000;
-        sleep.tv_nsec = (timeout * 1000) % 1000000000;
-    } else {
-        sleep.tv_sec = 60L * 60 * 24 * 356; // 1 years
-        sleep.tv_nsec = 0;
-    }
+    struct timespec sleep = { .tv_sec = 0, .tv_nsec = 1000000 };
+    bool timed_out = false;
     int pipes[3][2];
     pipe(pipes[0]);
     pipe(pipes[1]);
@@ -95,6 +90,9 @@ static void runTimedCommand(
     if (in != NULL) {
         write(pipes[0][1], in, strlen(in));
     }
+    struct timeval starttime;
+    gettimeofday(&starttime, NULL);
+    struct timeval endtime;
     int pid = fork();
     if (pid == 0) {
         setsid();
@@ -104,31 +102,44 @@ static void runTimedCommand(
         execlp("sh", "sh", "-c", command, NULL);
         exit(EXIT_FAILURE);
     } else {
-        bool timed_out = false;
-        struct timespec endtime = {.tv_sec = 0, .tv_nsec = 0};
-        if (nanosleep(&sleep, &endtime) == 0) {
-            kill(-pid, SIGKILL);
-            timed_out = true;
-        }
         int stat;
-        waitpid(pid, &stat, 0);
+        while (waitpid(pid, &stat, WNOHANG) == 0) {
+            if (nanosleep(&sleep, NULL) == 0) {
+                if (timeout > 0) {
+                    gettimeofday(&endtime, NULL);
+                    long elapsed_time = (endtime.tv_sec - starttime.tv_sec) * 1000000 + (endtime.tv_usec - starttime.tv_usec);
+                    if (elapsed_time >= timeout) {
+                        kill(-pid, SIGKILL);
+                        timed_out = true;
+                    }
+                }
+            }
+        }
+        gettimeofday(&endtime, NULL);
+        if (WIFEXITED(stat)) {
+            *exitc = WEXITSTATUS(stat);
+            *termsig = 0;
+        } else if (WIFSIGNALED(stat)) {
+            *exitc = 0;
+            *termsig = WTERMSIG(stat);
+        } else if (WIFSTOPPED(stat)) {
+            *exitc = 0;
+            *termsig = WSTOPSIG(stat);
+        }
         if (timedout != NULL) {
             *timedout = timed_out;
         }
         if (elapsed != NULL) {
-            *elapsed = (sleep.tv_sec - endtime.tv_sec) * 1000000 + (sleep.tv_nsec - endtime.tv_nsec) / 1000;
-            fprintf(stderr, "time: %lgs\n", *elapsed / (double)1000000);
+            *elapsed = (endtime.tv_sec - starttime.tv_sec) * 1000000 + (endtime.tv_usec - starttime.tv_usec);
         }
         close(pipes[0][1]);
         close(pipes[1][1]);
         close(pipes[2][1]);
         if (err != NULL) {
             *err = readStringFromFd(pipes[2][0]);
-            fprintf(stderr, "err: %s\n", *err);
         }
         if (out != NULL) {
             *out = readStringFromFd(pipes[1][0]);
-            fprintf(stderr, "out: %s\n", *out);
         }
         close(pipes[0][0]);
         close(pipes[1][0]);
@@ -139,7 +150,9 @@ static void runTimedCommand(
 void runTest(TestCase* test) {
     test->result.unsatisfiable = !areIntConstraintsSatisfiable(&test->config.buildtime)
         || !areIntConstraintsSatisfiable(&test->config.time)
-        || !areIntConstraintsSatisfiable(&test->config.exit);
+        || !areIntConstraintsSatisfiable(&test->config.exit)
+        || !areStringConstraintsSatisfiable(&test->config.err)
+        || !areStringConstraintsSatisfiable(&test->config.out);
     test->result.failed = test->result.unsatisfiable;
     for (int i = 0; !test->result.failed && i < test->config.run_count; i++) {
         if (strlen(test->config.build_command) != 0) {
@@ -150,18 +163,22 @@ void runTest(TestCase* test) {
                 timeout = -1;
             }
             char* command = fillFileNamePattern(test->config.build_command, test->path);
-            int exited;
-            int signaled;
             runTimedCommand(
                 command, timeout,
                 &test->result.buildtime, &test->result.out_of_buildtime,
-                &exited, &signaled, NULL, NULL, NULL
+                &test->result.buildexit, &test->result.buildsignal, NULL, NULL, NULL
             );
             free(command);
-            if (
-                testAllIntConstraints(&test->config.buildtime, test->result.buildtime) != NULL
-                || exited != 0 || signaled != 0
-            ) {
+            if (test->config.times_out_build) {
+                if (!test->result.out_of_buildtime) {
+                    test->result.failed_build = true;
+                    test->result.failed = true;
+                }
+            } else if (testAllIntConstraints(&test->config.buildtime, test->result.buildtime) != NULL) {
+                test->result.failed_build = true;
+                test->result.failed = true;
+            }
+            if (test->result.buildexit != 0 || test->result.buildsignal != 0) {
                 test->result.failed_build = true;
                 test->result.failed = true;
             }
@@ -182,9 +199,15 @@ void runTest(TestCase* test) {
                     test->config.in, &test->result.err, &test->result.out
                 );
                 free(command);
+                if (test->config.times_out) {
+                    if (!test->result.out_of_runtime) {
+                        test->result.failed = true;
+                    }
+                } else if (testAllIntConstraints(&test->config.time, test->result.runtime) != NULL) {
+                    test->result.failed = true;
+                }
                 if (
-                    testAllIntConstraints(&test->config.time, test->result.runtime) != NULL
-                    || testAllIntConstraints(&test->config.exit, test->result.exit) != NULL
+                    testAllIntConstraints(&test->config.exit, test->result.exit) != NULL
                     || testAllStringConstraints(&test->config.err, test->result.err) != NULL
                     || testAllStringConstraints(&test->config.out, test->result.out) != NULL
                 ) {
@@ -194,11 +217,9 @@ void runTest(TestCase* test) {
         }
         if (strlen(test->config.cleanup_command) != 0) {
             char* command = fillFileNamePattern(test->config.cleanup_command, test->path);
-            int exited;
-            int signaled;
-            runTimedCommand(command, -1, NULL, NULL, &exited, &signaled, NULL, NULL, NULL);
+            runTimedCommand(command, -1, NULL, NULL, &test->result.cleanupexit, &test->result.cleanupsignal, NULL, NULL, NULL);
             free(command);
-            if (exited != 0 || signaled != 0) {
+            if (test->result.cleanupexit != 0 || test->result.cleanupsignal != 0) {
                 test->result.failed_cleanup = true;
             }
         }
@@ -211,6 +232,7 @@ typedef struct {
     int id;
     int num_jobs;
     TestList* tests;
+    volatile bool finished;
 } TestRunnerData;
 
 void* testRunner(void* udata) {
@@ -218,24 +240,34 @@ void* testRunner(void* udata) {
     for (int t = data->id; t < data->tests->count; t += data->num_jobs) {
         runTest(&data->tests->tests[t]);
     }
+    data->finished = true;
     return NULL;
 }
 
-void runTests(TestList* tests, int jobs) {
+void runTests(TestList* tests, int jobs, bool progress) {
     TestRunnerData test_runners[jobs];
     for (int i = 0; i < jobs; i++) {
         test_runners[i].id = i;
         test_runners[i].num_jobs = jobs;
         test_runners[i].tests = tests;
     }
-    if (jobs == 1) {
-        testRunner((void*)test_runners);
-    } else {
-        for (int i = 0; i < jobs; i++) {
-            pthread_create(&test_runners[i].thread, NULL, testRunner, &test_runners[i]);
+    for (int i = 0; i < jobs; i++) {
+        pthread_create(&test_runners[i].thread, NULL, testRunner, &test_runners[i]);
+    }
+    if (progress) {
+        struct timespec sleep = {.tv_sec = 0, .tv_nsec = 100000000};
+        bool finished_all = false;
+        while (!finished_all) {
+            printTestSummary(tests, stdout);
+            fprintf(stdout, "\e[4A\e[J");
+            nanosleep(&sleep, NULL);
+            finished_all = true;
+            for (int i = 0; finished_all && i < jobs; i++) {
+                finished_all = test_runners[i].finished;
+            }
         }
-        for (int i = 0; i < jobs; i++) {
-            pthread_join(test_runners[i].thread, NULL);
-        }
+    }
+    for (int i = 0; i < jobs; i++) {
+        pthread_join(test_runners[i].thread, NULL);
     }
 }

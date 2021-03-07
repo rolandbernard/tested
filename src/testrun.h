@@ -5,6 +5,6 @@
 
 void runTest(TestCase* test);
 
-void runTests(TestList* tests, int jobs);
+void runTests(TestList* tests, int jobs, bool progress);
 
 #endif
