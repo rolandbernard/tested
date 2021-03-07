@@ -9,6 +9,7 @@
 
 void initTestResult(TestCaseResult* result) {
     result->completed = false;
+    result->failed = false;
     result->unsatisfiable = false;
     result->failed_build = false;
     result->failed_cleanup = false;
@@ -17,6 +18,7 @@ void initTestResult(TestCaseResult* result) {
     result->runtime = 0;
     result->out_of_runtime = false;
     result->exit = 0;
+    result->signal = 0;
     result->err = NULL;
     result->out = NULL;
 }

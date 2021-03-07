@@ -25,6 +25,7 @@ typedef struct {
 
 typedef struct {
     bool completed;
+    bool failed;
     bool unsatisfiable;
     bool failed_build;
     bool failed_cleanup;
@@ -32,7 +33,8 @@ typedef struct {
     bool out_of_buildtime;
     long runtime;
     bool out_of_runtime;
-    long exit;
+    int exit;
+    int signal;
     char* err;
     char* out;
 } TestCaseResult;

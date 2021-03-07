@@ -51,102 +51,159 @@ static char* fillFileNamePattern(const char* command, const char* path) {
     return ret;
 }
 
-void runTest(TestCase* test) {
-    for (int i = 0; i < test->config.run_count; i++) {
-        struct timespec smallsleep = {.tv_sec = 0, .tv_nsec = 1000000};
-        if (strlen(test->config.build_command) != 0) {
-            fprintf(stderr, "Building %s...\n", test->path);
-            long cputime = min(getIntConstraintMaximum(&test->config.buildcputime), getIntConstraintMaximum(&test->config.buildtime));
-            long time = getIntConstraintMaximum(&test->config.buildtime);
-            char* command = fillFileNamePattern(test->config.build_command, test->path);
-            struct timeval starttime;
-            gettimeofday(&starttime, NULL);
-            int pid = fork();
-            if (pid == 0) {
-                if (cputime != LONG_MAX) {
-                    struct rlimit cpu_limit;
-                    cpu_limit.rlim_cur = (cputime + 999999) / 1000000;
-                    cpu_limit.rlim_max = (cputime + 999999) / 1000000;
-                    setrlimit(RLIMIT_CPU, &cpu_limit);
-                }
-                execlp("sh", "sh", "-c", command, NULL);
-                exit(EXIT_FAILURE);
-            } else {
-                int stat;
-                struct timeval endtime;
-                struct rusage before;
-                getrusage(RUSAGE_CHILDREN, &before);
-                while (waitpid(pid, &stat, WNOHANG) == 0) {
-                    gettimeofday(&endtime, NULL);
-                    if (((long)endtime.tv_usec - (long)starttime.tv_usec) + ((long)endtime.tv_sec - (long)starttime.tv_sec) * 1000000 > time) {
-                        kill(pid, SIGKILL);
-                    }
-                    nanosleep(&smallsleep, NULL);
-                }
-                gettimeofday(&endtime, NULL);
-                struct rusage after;
-                getrusage(RUSAGE_CHILDREN, &after);
+static void childSignal(int signal) { }
+
+#define INITIAL_BUFFER_CAPACITY 64
+
+static char* readStringFromFd(int fd) {
+    int capacity = INITIAL_BUFFER_CAPACITY;
+    int length = 0;
+    char* buffer = (char*)malloc(capacity);
+    int last_length = 0;
+    do {
+        last_length = read(fd, buffer + length, capacity - length);
+        if (last_length > 0) {
+            length += last_length;
+            if (length == capacity) {
+                capacity *= 2;
+                buffer = (char*)realloc(buffer, capacity);
             }
-            free(command);
         }
-        if (strlen(test->config.run_command) != 0) {
-            fprintf(stderr, "Running %s...\n", test->path);
-            long cputime = min(getIntConstraintMaximum(&test->config.cputime), getIntConstraintMaximum(&test->config.time));
-            long time = getIntConstraintMaximum(&test->config.time);
-            char* command = fillFileNamePattern(test->config.run_command, test->path);
-            struct timeval starttime;
-            gettimeofday(&starttime, NULL);
-            struct tms before;
-            times(&before);
-            int pid = fork();
-            if (pid == 0) {
-                if (cputime != LONG_MAX) {
-                    struct rlimit cpu_limit;
-                    cpu_limit.rlim_cur = (cputime + 999999) / 1000000;
-                    cpu_limit.rlim_max = (cputime + 999999) / 1000000;
-                    setrlimit(RLIMIT_CPU, &cpu_limit);
-                }
-                execlp("sh", "sh", "-c", command, NULL);
-                exit(EXIT_FAILURE);
+    } while (last_length > 0);
+    buffer = (char*)realloc(buffer, length + 1);
+    buffer[length] = 0;
+    return buffer;
+}
+
+static void runTimedCommand(
+    const char* command, long timeout, long* elapsed, bool* timedout,
+    int* exitc, int* termsig, const char* in, char** err, char** out
+) {
+    struct timespec sleep;
+    if (timeout >= 0) {
+        sleep.tv_sec = timeout / 1000000;
+        sleep.tv_nsec = (timeout * 1000) % 1000000000;
+    } else {
+        sleep.tv_sec = 60L * 60 * 24 * 356; // 1 years
+        sleep.tv_nsec = 0;
+    }
+    int pipes[3][2];
+    pipe(pipes[0]);
+    pipe(pipes[1]);
+    pipe(pipes[2]);
+    signal(SIGCHLD, childSignal);
+    if (in != NULL) {
+        write(pipes[0][1], in, strlen(in));
+    }
+    int pid = fork();
+    if (pid == 0) {
+        setsid();
+        dup2(pipes[0][0], fileno(stdin));
+        dup2(pipes[1][1], fileno(stdout));
+        dup2(pipes[2][1], fileno(stderr));
+        execlp("sh", "sh", "-c", command, NULL);
+        exit(EXIT_FAILURE);
+    } else {
+        bool timed_out = false;
+        struct timespec endtime = {.tv_sec = 0, .tv_nsec = 0};
+        if (nanosleep(&sleep, &endtime) == 0) {
+            kill(-pid, SIGKILL);
+            timed_out = true;
+        }
+        int stat;
+        waitpid(pid, &stat, 0);
+        if (timedout != NULL) {
+            *timedout = timed_out;
+        }
+        if (elapsed != NULL) {
+            *elapsed = (sleep.tv_sec - endtime.tv_sec) * 1000000 + (sleep.tv_nsec - endtime.tv_nsec) / 1000;
+            fprintf(stderr, "time: %lgs\n", *elapsed / (double)1000000);
+        }
+        close(pipes[0][1]);
+        close(pipes[1][1]);
+        close(pipes[2][1]);
+        if (err != NULL) {
+            *err = readStringFromFd(pipes[2][0]);
+            fprintf(stderr, "err: %s\n", *err);
+        }
+        if (out != NULL) {
+            *out = readStringFromFd(pipes[1][0]);
+            fprintf(stderr, "out: %s\n", *out);
+        }
+        close(pipes[0][0]);
+        close(pipes[1][0]);
+        close(pipes[2][0]);
+    }
+}
+
+void runTest(TestCase* test) {
+    test->result.unsatisfiable = !areIntConstraintsSatisfiable(&test->config.buildtime)
+        || !areIntConstraintsSatisfiable(&test->config.time)
+        || !areIntConstraintsSatisfiable(&test->config.exit);
+    test->result.failed = test->result.unsatisfiable;
+    for (int i = 0; !test->result.failed && i < test->config.run_count; i++) {
+        if (strlen(test->config.build_command) != 0) {
+            long timeout = getIntConstraintMaximum(&test->config.buildtime);
+            if (timeout != LONG_MAX) {
+                timeout += 10000;
             } else {
-                bool timed_out = false;
-                int stat;
-                struct timeval endtime;
-                while (waitpid(pid, &stat, WNOHANG) == 0) {
-                    gettimeofday(&endtime, NULL);
-                    if (((long)endtime.tv_usec - (long)starttime.tv_usec) + ((long)endtime.tv_sec - (long)starttime.tv_sec) * 1000000 > time) {
-                        kill(pid, SIGKILL);
-                        int tmp;
-                        timed_out = true;
-                    }
-                    nanosleep(&smallsleep, NULL);
-                }
-                gettimeofday(&endtime, NULL);
-                struct tms after;
-                times(&after);
-                long time = ((after.tms_cutime - before.tms_cutime) * 1000000 + (after.tms_cstime - before.tms_cstime) * 1000000) / sysconf(_SC_CLK_TCK);
-                fprintf(stderr, "time: %lgs\n", time / (double)1000000);
-                fprintf(stderr, "befor: %lu %lu\n", before.tms_cutime, before.tms_cstime);
-                fprintf(stderr, "after: %lu %lu\n", after.tms_cutime, after.tms_cstime);
+                timeout = -1;
             }
+            char* command = fillFileNamePattern(test->config.build_command, test->path);
+            int exited;
+            int signaled;
+            runTimedCommand(
+                command, timeout,
+                &test->result.buildtime, &test->result.out_of_buildtime,
+                &exited, &signaled, NULL, NULL, NULL
+            );
             free(command);
+            if (
+                testAllIntConstraints(&test->config.buildtime, test->result.buildtime) != NULL
+                || exited != 0 || signaled != 0
+            ) {
+                test->result.failed_build = true;
+                test->result.failed = true;
+            }
+        }
+        if (!test->result.failed) {
+            if (strlen(test->config.run_command) != 0) {
+                long timeout = getIntConstraintMaximum(&test->config.time);
+                if (timeout != LONG_MAX) {
+                    timeout += 10000;
+                } else {
+                    timeout = -1;
+                }
+                char* command = fillFileNamePattern(test->config.run_command, test->path);
+                runTimedCommand(
+                    command, timeout,
+                    &test->result.runtime, &test->result.out_of_runtime,
+                    &test->result.exit, &test->result.signal,
+                    test->config.in, &test->result.err, &test->result.out
+                );
+                free(command);
+                if (
+                    testAllIntConstraints(&test->config.time, test->result.runtime) != NULL
+                    || testAllIntConstraints(&test->config.exit, test->result.exit) != NULL
+                    || testAllStringConstraints(&test->config.err, test->result.err) != NULL
+                    || testAllStringConstraints(&test->config.out, test->result.out) != NULL
+                ) {
+                    test->result.failed = true;
+                }
+            }
         }
         if (strlen(test->config.cleanup_command) != 0) {
             char* command = fillFileNamePattern(test->config.cleanup_command, test->path);
-            fprintf(stderr, "Cleanup %s...\n", test->path);
-            int pid = fork();
-            if (pid == 0) {
-                execlp("sh", "sh", "-c", command, NULL);
-                exit(EXIT_FAILURE);
-            } else {
-                int stat;
-                waitpid(pid, &stat, 0);
-                struct rusage usage;
-            }
+            int exited;
+            int signaled;
+            runTimedCommand(command, -1, NULL, NULL, &exited, &signaled, NULL, NULL, NULL);
             free(command);
+            if (exited != 0 || signaled != 0) {
+                test->result.failed_cleanup = true;
+            }
         }
-        fprintf(stderr, "Finished %s.\n", test->path);
     }
+    test->result.completed = true;
 }
 
 typedef struct {
