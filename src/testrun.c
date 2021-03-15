@@ -5,12 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
+#include <sys/prctl.h>
 #include <sys/time.h>
 #include <sys/times.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 #include <wait.h>
+#include <fcntl.h>
 
 #include "testrun.h"
 
@@ -57,16 +59,16 @@ static char* readStringFromFd(int fd) {
     int length = 0;
     char* buffer = (char*)malloc(capacity);
     int last_length = 0;
-    do {
-        last_length = read(fd, buffer + length, capacity - length);
-        if (last_length > 0) {
-            length += last_length;
-            if (length == capacity) {
-                capacity *= 2;
-                buffer = (char*)realloc(buffer, capacity);
-            }
-        }
-    } while (last_length > 0);
+    // do {
+    //     last_length = read(fd, buffer + length, capacity - length);
+    //     if (last_length > 0) {
+    //         length += last_length;
+    //         if (length == capacity) {
+    //             capacity *= 2;
+    //             buffer = (char*)realloc(buffer, capacity);
+    //         }
+    //     }
+    // } while (last_length > 0);
     buffer = (char*)realloc(buffer, length + 1);
     buffer[length] = 0;
     return buffer;
@@ -100,6 +102,7 @@ typedef struct {
 
 static void startRunningCommand(TestRunStatus* test_run, const char* command, const char* in, long timeout) {
     test_run->timeout = timeout;
+    test_run->timed_out = false;
     int pipes[3][2];
     pipe(pipes[0]);
     pipe(pipes[1]);
@@ -164,6 +167,7 @@ static void startTest(TestRunStatus* test_run, TestCase* test) {
         || !areStringConstraintsSatisfiable(&test->config.out);
     test->result.failed = test->result.unsatisfiable;
     test_run->test = test;
+    test_run->run = 0;
     if (test->result.failed) {
         test_run->state = TEST_FINISHED_CLEANUP;
     }
@@ -175,7 +179,6 @@ static void startTestBuild(TestRunStatus* test_run) {
         test_run->status = TEST_FINISHED_RUN;
     } else if (strlen(test->config.build_command) != 0) {
         test_run->state = TEST_RUNNING_BUILD;
-        test_run->timed_out = false;
         long timeout = getIntConstraintMaximum(&test->config.buildtime);
         if (timeout != LONG_MAX) {
             timeout += 10000;
@@ -217,7 +220,6 @@ static void startTestRun(TestRunStatus* test_run) {
         test_run->status = TEST_FINISHED_RUN;
     } else if (strlen(test->config.run_command) != 0) {
         test_run->state = TEST_RUNNING_RUN;
-        test_run->timed_out = false;
         long timeout = getIntConstraintMaximum(&test->config.time);
         if (timeout != LONG_MAX) {
             timeout += 10000;
@@ -259,7 +261,6 @@ static void startTestCleanup(TestRunStatus* test_run) {
     TestCase* test = test_run->test;
     if (strlen(test->config.build_command) != 0) {
         test_run->state = TEST_RUNNING_CLEANUP;
-        test_run->timed_out = false;
         char* command = fillFileNamePattern(test->config.cleanup_command, test->path);
         startRunningCommand(test_run, command, test->config.in, -1);
         free(command);
@@ -291,18 +292,55 @@ static void testForTimeout(TestRunStatus* test_run) {
 TestRunStatus* running_tests;
 int running_test_count;
 
-static void childSignal(int signal) {
+static void collectChilds() {
     struct timeval time;
     gettimeofday(&time, NULL);
     int status;
-    pid_t pid = wait(&status);
+    pid_t pid;
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        for (int i = 0; i < running_test_count; i++) {
+            if (running_tests[i].pid == pid) {
+                running_tests[i].status = status;
+                running_tests[i].end_time = time;
+                switch (running_tests[i].state) {
+                case TEST_RUNNING_BUILD:
+                    running_tests[i].state = TEST_TO_FINISHED_BUILD;
+                    break;
+                case TEST_RUNNING_RUN:
+                    running_tests[i].state = TEST_TO_FINISHED_RUN;
+                    break;
+                case TEST_RUNNING_CLEANUP:
+                    running_tests[i].state = TEST_TO_FINISHED_CLEANUP;
+                    break;
+                default:
+                    break;
+                }
+                break;
+            }
+        }
+    }
+}
+
+static void killChilds() {
     for (int i = 0; i < running_test_count; i++) {
-        if (running_tests[i].pid == pid) {
-            running_tests[i].status = status;
-            running_tests[i].end_time = time;
-            running_tests[i].state++;
+        switch (running_tests[i].state) {
+        case TEST_RUNNING_BUILD:
+        case TEST_RUNNING_RUN:
+        case TEST_RUNNING_CLEANUP:
+            kill(-running_tests[i].pid, SIGKILL);
+            break;
+        default:
             break;
         }
+    }
+}
+
+static void signalHandler(int signal) {
+    if (signal == SIGCHLD) {
+        collectChilds();
+    } else {
+        killChilds();
+        exit(0);
     }
 }
 
@@ -315,7 +353,11 @@ void runTests(TestList* tests, int jobs, bool progress) {
     }
     running_tests = test_runs;
     running_test_count = jobs;
-    signal(SIGCHLD, childSignal);
+    signal(SIGCHLD, signalHandler);
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
+    signal(SIGHUP, signalHandler);
+    prctl(PR_SET_PDEATHSIG, SIGTERM);
     // run tests
     int tests_enqueued = 0;
     int tests_run = 0;
@@ -329,9 +371,22 @@ void runTests(TestList* tests, int jobs, bool progress) {
             fprintf(stderr, "tests passed: %i\n", tests_run - tests_failed);
             fprintf(stderr, "tests failed: %i\n", tests_failed);
         }
+        fputc('\n', stderr);
+        for (int i = 0; i < jobs; i++) {
+            if (test_runs[i].state == TEST_EMPTY) {
+                fprintf(stderr, "test %i: IDLE\n", i);
+            } else {
+                if (test_runs[i].test->config.run_count > 1) {
+                    fprintf(stderr, "task %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
+                } else {
+                    fprintf(stderr, "task %i: %s\n", i, test_runs[i].test->config.name);
+                }
+            }
+        }
     }
     struct timespec sleep = { .tv_sec = 0, .tv_nsec = 1000000 };
     while (tests_run < tests->count) {
+        collectChilds();
         bool state_changed = false;
         for (int i = 0; i < jobs; i++) {
             switch (test_runs[i].state) {
@@ -396,6 +451,8 @@ void runTests(TestList* tests, int jobs, bool progress) {
                         tests_enqueued++;
                         startTestBuild(&test_runs[i]);
                         state_changed = true;
+                    } else {
+                        test_runs[i].state = TEST_EMPTY;
                     }
                 }
                 break;
@@ -404,7 +461,7 @@ void runTests(TestList* tests, int jobs, bool progress) {
         }
         if (!state_changed) {
             if (progress) {
-                fprintf(stderr, "\e[3A\e[J\n");
+                fprintf(stderr, "\e[%iA\e[J\n", 4 + jobs);
                 if (istty) {
                     fprintf(stderr, "\e[32mtests passed: %i\e[m\n", tests_run - tests_failed);
                     fprintf(stderr, "\e[31mtests failed: %i\e[m\n", tests_failed);
@@ -412,12 +469,24 @@ void runTests(TestList* tests, int jobs, bool progress) {
                     fprintf(stderr, "tests passed: %i\n", tests_run - tests_failed);
                     fprintf(stderr, "tests failed: %i\n", tests_failed);
                 }
+                fputc('\n', stderr);
+                for (int i = 0; i < jobs; i++) {
+                    if (test_runs[i].state == TEST_EMPTY) {
+                        fprintf(stderr, "task %i: IDLE\n", i);
+                    } else {
+                        if (test_runs[i].test->config.run_count > 1) {
+                            fprintf(stderr, "task %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
+                        } else {
+                            fprintf(stderr, "task %i: %s\n", i, test_runs[i].test->config.name);
+                        }
+                    }
+                }
             }
             nanosleep(&sleep, NULL);
         }
     }
     if (progress) {
-        fprintf(stderr, "\e[3A\e[J");
+        fprintf(stderr, "\e[%iA\e[J", 4 + jobs);
     }
     signal(SIGCHLD, SIG_DFL);
 }
