@@ -9,10 +9,10 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <time.h>
 #include <unistd.h>
 #include <wait.h>
-#include <fcntl.h>
 
 #include "testrun.h"
 
@@ -52,24 +52,13 @@ static char* fillFileNamePattern(const char* command, const char* path) {
     return ret;
 }
 
-#define INITIAL_BUFFER_CAPACITY 64
-
 static char* readStringFromFd(int fd) {
-    int capacity = INITIAL_BUFFER_CAPACITY;
     int length = 0;
-    char* buffer = (char*)malloc(capacity);
-    int last_length = 0;
-    // do {
-    //     last_length = read(fd, buffer + length, capacity - length);
-    //     if (last_length > 0) {
-    //         length += last_length;
-    //         if (length == capacity) {
-    //             capacity *= 2;
-    //             buffer = (char*)realloc(buffer, capacity);
-    //         }
-    //     }
-    // } while (last_length > 0);
-    buffer = (char*)realloc(buffer, length + 1);
+    ioctl(fd, FIONREAD, &length); 
+    char* buffer = (char*)malloc(length + 1);
+    if (length > 0) {
+        read(fd, buffer, length);
+    }
     buffer[length] = 0;
     return buffer;
 }
@@ -489,4 +478,7 @@ void runTests(TestList* tests, int jobs, bool progress) {
         fprintf(stderr, "\e[%iA\e[J", 4 + jobs);
     }
     signal(SIGCHLD, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+    signal(SIGHUP, SIG_DFL);
 }
