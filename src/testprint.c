@@ -116,7 +116,7 @@ void printTestSummary(TestList* tests, FILE* output) {
             }
         }
     }
-    fputc('\n', output);
+    fprintf(output, "\e[J\n");
     if (istty) {
         fprintf(output, "\e[32mtests passed: %i\e[m\n", num_passed);
         fprintf(output, "\e[31mtests failed: %i\e[m\n", num_failed);
