@@ -58,71 +58,77 @@ void printTestResult(TestCase* test, FILE* output, bool verbose) {
     fputc('\n', output);
     if (test->result.completed) {
         if (test->result.unsatisfiable) {
-            fprintf(stderr, "--> the constraints are not satisfiable\n");
+            fprintf(output, "--> the constraints are not satisfiable\n");
             if (verbose) {
-                fprintf(stderr, "==> stopped the run\n");
+                fprintf(output, "==> stopped the run\n");
             }
         } else {
-            Constraint* constr;
-            constr = testAllIntConstraints(&test->config.buildtime, test->result.buildtime);
-            if (test->result.out_of_buildtime) {
-                fprintf(stderr, "--> build was killed after %lgs, but expected %s %lgs\n", test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
-            } else {
-                if (constr != NULL) {
-                    fprintf(stderr, "--> build took %lgs, but expected %s %lgs\n", test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
-                } else if(verbose) {
-                    fprintf(stderr, "==> build took %lgs\n", test->result.buildtime / 1e6);
-                }
-                if (test->result.failed_build) {
-                    if (test->result.buildexit != 0) {
-                        fprintf(stderr, "--> build failed with non zero exit code %i\n", test->result.buildexit);
-                    } else {
-                        fprintf(stderr, "--> build terminated with signal %s\n", strsignal(test->result.buildsignal));
-                    }
-                } else if(verbose) {
-                    fprintf(stderr, "==> build exited with code %i\n", test->result.buildexit);
-                }
-            }
-            constr = testAllIntConstraints(&test->config.time, test->result.runtime);
-            if (test->result.out_of_runtime) {
-                fprintf(stderr, "--> run killed after %lgs, but expected %s %lgs\n", test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
-            } else {
-                if (constr != NULL) {
-                    fprintf(stderr, "--> run took %lgs, but expected %s %lgs\n", test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
-                } else if (verbose) {
-                    fprintf(stderr, "==> run took %lgs\n", test->result.runtime / 1e6);
-                }
-                if (test->result.signal != 0) {
-                    fprintf(stderr, "--> run terminated with signal %i\n", test->result.signal);
+            if (strlen(test->config.build_command) != 0) {
+                Constraint* constr;
+                constr = testAllIntConstraints(&test->config.buildtime, test->result.buildtime);
+                if (test->result.out_of_buildtime) {
+                    fprintf(output, "--> build was killed after %lgs, but expected %s %lgs\n", test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
                 } else {
-                    constr = testAllIntConstraints(&test->config.exit, test->result.exit);
                     if (constr != NULL) {
-                        fprintf(stderr, "--> run exited with %i, but expected %s %li\n", test->result.exit, getConstraintStr(constr->kind), constr->value);
+                        fprintf(output, "--> build took %lgs, but expected %s %lgs\n", test->result.buildtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
                     } else if (verbose) {
-                        fprintf(stderr, "==> run exited with %i\n", test->result.exit);
+                        fprintf(output, "==> build took %lgs\n", test->result.buildtime / 1e6);
+                    }
+                    if (test->result.failed_build) {
+                        if (test->result.buildexit != 0) {
+                            fprintf(output, "--> build failed with non zero exit code %i\n", test->result.buildexit);
+                        } else {
+                            fprintf(output, "--> build terminated with signal %s\n", strsignal(test->result.buildsignal));
+                        }
+                    } else if (verbose) {
+                        fprintf(output, "==> build exited with code %i\n", test->result.buildexit);
                     }
                 }
-                constr = testAllStringConstraints(&test->config.err, test->result.err);
-                if (constr != NULL) {
-                    fprintf(stderr, "--> stderr is '%s', but expected %s '%s'\n", test->result.err, getConstraintStr(constr->kind), constr->string);
-                } else if (verbose) {
-                    fprintf(stderr, "==> stderr is '%s'\n", test->result.err);
-                }
-                constr = testAllStringConstraints(&test->config.out, test->result.out);
-                if (constr != NULL) {
-                    fprintf(stderr, "--> stdout is '%s', but expected %s '%s'\n", test->result.out, getConstraintStr(constr->kind), constr->string);
-                } else if (verbose) {
-                    fprintf(stderr, "==> stdout is '%s'\n", test->result.out);
+            }
+            if (strlen(test->config.run_command) != 0) {
+                Constraint* constr = testAllIntConstraints(&test->config.time, test->result.runtime);
+                if (test->result.out_of_runtime) {
+                    fprintf(output, "--> run killed after %lgs, but expected %s %lgs\n", test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
+                } else {
+                    if (constr != NULL) {
+                        fprintf(output, "--> run took %lgs, but expected %s %lgs\n", test->result.runtime / 1e6, getConstraintStr(constr->kind), constr->value / 1e6);
+                    } else if (verbose) {
+                        fprintf(output, "==> run took %lgs\n", test->result.runtime / 1e6);
+                    }
+                    if (test->result.signal != 0) {
+                        fprintf(output, "--> run terminated with signal %i\n", test->result.signal);
+                    } else {
+                        constr = testAllIntConstraints(&test->config.exit, test->result.exit);
+                        if (constr != NULL) {
+                            fprintf(output, "--> run exited with code %i, but expected %s %li\n", test->result.exit, getConstraintStr(constr->kind), constr->value);
+                        } else if (verbose) {
+                            fprintf(output, "==> run exited with code %i\n", test->result.exit);
+                        }
+                    }
+                    constr = testAllStringConstraints(&test->config.err, test->result.err);
+                    if (constr != NULL) {
+                        fprintf(output, "--> stderr is '%s', but expected %s '%s'\n", test->result.err, getConstraintStr(constr->kind), constr->string);
+                    } else if (verbose) {
+                        fprintf(output, "==> stderr is '%s'\n", test->result.err);
+                    }
+                    constr = testAllStringConstraints(&test->config.out, test->result.out);
+                    if (constr != NULL) {
+                        fprintf(output, "--> stdout is '%s', but expected %s '%s'\n", test->result.out, getConstraintStr(constr->kind), constr->string);
+                    } else if (verbose) {
+                        fprintf(output, "==> stdout is '%s'\n", test->result.out);
+                    }
                 }
             }
-            if (test->result.failed_cleanup) {
-                if (test->result.buildexit != 0) {
-                    fprintf(stderr, "--> cleanup failed with non zero exit code %i\n", test->result.cleanupexit);
-                } else {
-                    fprintf(stderr, "--> cleanup terminated with signal %s\n", strsignal(test->result.cleanupsignal));
+            if (strlen(test->config.cleanup_command) != 0) {
+                if (test->result.failed_cleanup) {
+                    if (test->result.buildexit != 0) {
+                        fprintf(output, "--> cleanup failed with non zero exit code %i\n", test->result.cleanupexit);
+                    } else {
+                        fprintf(output, "--> cleanup terminated with signal %s\n", strsignal(test->result.cleanupsignal));
+                    }
+                } else if (verbose) {
+                    fprintf(output, "==> cleanup exited with code %i\n", test->result.cleanupexit);
                 }
-            } else if (verbose) {
-                fprintf(stderr, "==> cleanup exited with code %i\n", test->result.cleanupexit);
             }
         }
         fputc('\n', output);
@@ -151,7 +157,7 @@ void printTestSummary(TestList* tests, FILE* output) {
             }
         }
     }
-    fprintf(output, "\e[J\n");
+    fputc('\n', output);
     if (istty) {
         fprintf(output, "\e[32mtests passed: %i\e[m\n", num_passed);
         fprintf(output, "\e[31mtests failed: %i\e[m\n", num_failed);
