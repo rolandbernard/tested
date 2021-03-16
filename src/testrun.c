@@ -165,7 +165,7 @@ static void startTest(TestRunStatus* test_run, TestCase* test) {
 static void startTestBuild(TestRunStatus* test_run) {
     TestCase* test = test_run->test;
     if (test->result.failed) {
-        test_run->status = TEST_FINISHED_RUN;
+        test_run->state = TEST_FINISHED_RUN;
     } else if (strlen(test->config.build_command) != 0) {
         test_run->state = TEST_RUNNING_BUILD;
         long timeout = getIntConstraintMaximum(&test->config.buildtime);
@@ -206,7 +206,7 @@ static void stopTestBuild(TestRunStatus* test_run) {
 static void startTestRun(TestRunStatus* test_run) {
     TestCase* test = test_run->test;
     if (test->result.failed) {
-        test_run->status = TEST_FINISHED_RUN;
+        test_run->state = TEST_FINISHED_RUN;
     } else if (strlen(test->config.run_command) != 0) {
         test_run->state = TEST_RUNNING_RUN;
         long timeout = getIntConstraintMaximum(&test->config.time);
@@ -330,6 +330,7 @@ static void signalHandler(int signal) {
         collectChilds();
     } else {
         killChilds();
+        collectChilds();
         exit(0);
     }
 }
