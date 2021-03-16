@@ -240,6 +240,7 @@ static void stopTestRun(TestRunStatus* test_run) {
         || testAllIntConstraints(&test->config.exit, test->result.exit) != NULL
         || testAllStringConstraints(&test->config.err, test->result.err) != NULL
         || testAllStringConstraints(&test->config.out, test->result.out) != NULL
+        || test->result.signal != 0
     ) {
         test->result.failed = true;
     }
@@ -333,6 +334,25 @@ static void signalHandler(int signal) {
     }
 }
 
+static void printState(TestRunStatus* test_runs, int jobs, int passed, int failed) {
+    fputc('\n', stderr);
+    fprintf(stderr, "\e[32mtests passed: %i\e[m\n", passed);
+    fprintf(stderr, "\e[31mtests failed: %i\e[m\n", failed);
+    fputc('\n', stderr);
+    for (int i = 0; i < jobs; i++) {
+        if (test_runs[i].state == TEST_EMPTY) {
+            fprintf(stderr, "task %i: IDLE\n", i);
+        } else {
+            if (test_runs[i].test->config.run_count > 1) {
+                fprintf(stderr, "task %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
+            } else {
+                fprintf(stderr, "task %i: %s\n", i, test_runs[i].test->config.name);
+            }
+        }
+    }
+    fputc('\n', stderr);
+}
+
 void runTests(TestList* tests, int jobs, bool progress) {
     bool istty = isatty(fileno(stderr));
     TestRunStatus test_runs[jobs];
@@ -351,29 +371,11 @@ void runTests(TestList* tests, int jobs, bool progress) {
     int tests_enqueued = 0;
     int tests_run = 0;
     int tests_failed = 0;
-    if (progress) {
-        fprintf(stderr, "\n");
-        if (istty) {
-            fprintf(stderr, "\e[32mtests passed: %i\e[m\n", tests_run - tests_failed);
-            fprintf(stderr, "\e[31mtests failed: %i\e[m\n", tests_failed);
-        } else {
-            fprintf(stderr, "tests passed: %i\n", tests_run - tests_failed);
-            fprintf(stderr, "tests failed: %i\n", tests_failed);
-        }
-        fputc('\n', stderr);
-        for (int i = 0; i < jobs; i++) {
-            if (test_runs[i].state == TEST_EMPTY) {
-                fprintf(stderr, "test %i: IDLE\n", i);
-            } else {
-                if (test_runs[i].test->config.run_count > 1) {
-                    fprintf(stderr, "task %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
-                } else {
-                    fprintf(stderr, "task %i: %s\n", i, test_runs[i].test->config.name);
-                }
-            }
-        }
+    if (progress && istty) {
+        printState(test_runs, jobs, tests_run - tests_failed, tests_failed);
     }
     struct timespec sleep = { .tv_sec = 0, .tv_nsec = 1000000 };
+    bool prev_change = false;
     while (tests_run < tests->count) {
         collectChilds();
         bool state_changed = false;
@@ -449,33 +451,16 @@ void runTests(TestList* tests, int jobs, bool progress) {
             }
         }
         if (!state_changed) {
-            if (progress) {
-                fprintf(stderr, "\e[%iA\e[J\n", 4 + jobs);
-                if (istty) {
-                    fprintf(stderr, "\e[32mtests passed: %i\e[m\n", tests_run - tests_failed);
-                    fprintf(stderr, "\e[31mtests failed: %i\e[m\n", tests_failed);
-                } else {
-                    fprintf(stderr, "tests passed: %i\n", tests_run - tests_failed);
-                    fprintf(stderr, "tests failed: %i\n", tests_failed);
-                }
-                fputc('\n', stderr);
-                for (int i = 0; i < jobs; i++) {
-                    if (test_runs[i].state == TEST_EMPTY) {
-                        fprintf(stderr, "task %i: IDLE\n", i);
-                    } else {
-                        if (test_runs[i].test->config.run_count > 1) {
-                            fprintf(stderr, "task %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
-                        } else {
-                            fprintf(stderr, "task %i: %s\n", i, test_runs[i].test->config.name);
-                        }
-                    }
-                }
+            if (progress && istty && prev_change) {
+                fprintf(stderr, "\e[%iA\e[J", 5 + jobs);
+                printState(test_runs, jobs, tests_run - tests_failed, tests_failed);
             }
             nanosleep(&sleep, NULL);
         }
+        prev_change = state_changed;
     }
-    if (progress) {
-        fprintf(stderr, "\e[%iA\e[J", 4 + jobs);
+    if (progress && istty) {
+        fprintf(stderr, "\e[%iA\e[J", 5 + jobs);
     }
     signal(SIGCHLD, SIG_DFL);
     signal(SIGINT, SIG_DFL);
