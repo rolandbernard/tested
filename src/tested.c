@@ -15,9 +15,12 @@ static void printHelp(const char* prog) {
     fprintf(stderr, "  -c --config=CONFIG\n");
     fprintf(stderr, "  -j --jobs=JOBS      number of parallel threads\n");
     fprintf(stderr, "  -h --help           print this text\n");
+    fprintf(stderr, "  -v --verbose        print more information\n");
+    fprintf(stderr, "  -a --all            print informations for all tests\n");
+    fprintf(stderr, "  -P --no-progress    donot print progress information\n");
 }
 
-static void parseArguments(int argc, const char** argv, TestCaseConfig* def, TestList* tests, int* num_jobs) {
+static void parseArguments(int argc, const char** argv, TestCaseConfig* def, TestList* tests, int* num_jobs, bool* all, bool* verbose, bool* progress) {
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             if (argv[i][1] == '-') {
@@ -73,6 +76,12 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
                     }
                 } else if (strcmp(argv[i], "--help") == 0) {
                     printHelp(argv[0]);
+                } else if (strcmp(argv[i], "--verbose") == 0) {
+                    *verbose = true;
+                } else if (strcmp(argv[i], "--no-progress") == 0) {
+                    *progress = false;
+                } else if (strcmp(argv[i], "--all") == 0) {
+                    *all = true;
                 } else {
                     fprintf(stderr, "unknown option %s\n", argv[i]);
                 }
@@ -113,6 +122,12 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
                         }
                     } else if (argv[p][j] == 'h') {
                         printHelp(argv[0]);
+                    } else if (argv[p][j] == 'v') {
+                        *verbose = true;
+                    } else if (argv[p][j] == 'P') {
+                        *progress = false;
+                    } else if (argv[p][j] == 'a') {
+                        *all = true;
                     } else {
                         fprintf(stderr, "unknown option -%c\n", argv[p][j]);
                     }
@@ -126,15 +141,18 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
 
 int main(int argc, const char** argv) {
     int num_jobs = 1;
+    bool print_all = false;
+    bool verbose = false;
+    bool progress = true;
     TestList tests;
     initTestList(&tests);
     TestCaseConfig def;
     initTestConfig(&def);
-    parseArguments(argc, argv, &def, &tests, &num_jobs);
+    parseArguments(argc, argv, &def, &tests, &num_jobs, &print_all, &verbose, &progress);
     deinitTestConfig(&def);
     if (tests.count > 0) {
-        runTests(&tests, num_jobs, true);
-        printTestResults(&tests, stdout);
+        runTests(&tests, num_jobs, progress);
+        printTestResults(&tests, stdout, print_all, verbose);
     }
     deinitTestList(&tests);
     return 0;
