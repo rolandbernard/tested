@@ -5,9 +5,9 @@
 
 #include "testcase.h"
 
-void printTestResult(TestCase* test, FILE* output);
+void printTestResult(TestCase* test, FILE* output, bool verbose);
 
-void printTestResults(TestList* tests, FILE* output);
+void printTestResults(TestList* tests, FILE* output, bool all, bool verbose);
 
 void printTestSummary(TestList* tests, FILE* output);
 
