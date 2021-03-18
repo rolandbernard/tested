@@ -41,3 +41,8 @@ The following constraints are understood:
 * `exit: number constraints` constrains the exit code of the run command. (e.g.: `exit: = 0`)
 * `stderr: string constraints` constrains the stderr of the run command. (e.g.: `stderr: =`)
 * `stdout: string constraints` constrains the stdout of the run command. (e.g.: `stdout: = Hello world\n`)
+
+## Example
+You can find an example of the usage here: https://github.com/rolandbernard/basic-jit.
+
+![An example](images/example.gif)
