@@ -4,10 +4,10 @@ This is a small program to run language independent file based tests.
 
 ## Building from source
 ```
-$ git clone https://github.com/rolandbernard/tested
-$ cd tested
-$ make BUILD=release
-$ ./build/release/bin/tested --help
+git clone https://github.com/rolandbernard/tested
+cd tested
+make BUILD=release
+./build/release/bin/tested --help
 ```
 
 ## Usage
