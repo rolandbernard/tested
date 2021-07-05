@@ -8,7 +8,7 @@
 #include "util.h"
 
 bool includesConstraintKind(ConstraintList* list, ConstraintKind kind) {
-    if (list->count == CONSTRAIND_COUNT) {
+    if (list->count == CONSTRAINT_COUNT) {
         return true;
     } else {
         for (int i = 0; i < list->count; i++) {
@@ -32,10 +32,10 @@ Constraint* getConstraint(ConstraintList* list, ConstraintKind kind) {
 void insertIntConstraint(ConstraintList* list, Constraint constraint) {
     Constraint* existing = getConstraint(list, constraint.kind);
     if (existing == NULL) {
-        if (constraint.kind == CONSTRAIND_UNEQUAL) {
-            existing = getConstraint(list, CONSTRAIND_EQUAL);
-        } else if (constraint.kind == CONSTRAIND_EQUAL) {
-            existing = getConstraint(list, CONSTRAIND_UNEQUAL);
+        if (constraint.kind == CONSTRAINT_UNEQUAL) {
+            existing = getConstraint(list, CONSTRAINT_EQUAL);
+        } else if (constraint.kind == CONSTRAINT_EQUAL) {
+            existing = getConstraint(list, CONSTRAINT_UNEQUAL);
         }
     }
     if (existing != NULL) {
@@ -50,10 +50,10 @@ void insertIntConstraint(ConstraintList* list, Constraint constraint) {
 void insertStringConstraint(ConstraintList* list, Constraint constraint) {
     Constraint* existing = getConstraint(list, constraint.kind);
     if (existing == NULL) {
-        if (constraint.kind == CONSTRAIND_UNEQUAL) {
-            existing = getConstraint(list, CONSTRAIND_EQUAL);
-        } else if (constraint.kind == CONSTRAIND_EQUAL) {
-            existing = getConstraint(list, CONSTRAIND_UNEQUAL);
+        if (constraint.kind == CONSTRAINT_UNEQUAL) {
+            existing = getConstraint(list, CONSTRAINT_EQUAL);
+        } else if (constraint.kind == CONSTRAINT_EQUAL) {
+            existing = getConstraint(list, CONSTRAINT_UNEQUAL);
         }
     }
     if (existing != NULL) {
@@ -70,22 +70,22 @@ Constraint* testAllIntConstraints(ConstraintList* list, long value) {
     for (int i = 0; i < list->count; i++) {
         bool satisfied = true;
         switch (list->constraints[i].kind) {
-        case CONSTRAIND_EQUAL:
+        case CONSTRAINT_EQUAL:
             satisfied = (value == list->constraints[i].value);
             break;
-        case CONSTRAIND_UNEQUAL:
+        case CONSTRAINT_UNEQUAL:
             satisfied = (value != list->constraints[i].value);
             break;
-        case CONSTRAIND_LESS:
+        case CONSTRAINT_LESS:
             satisfied = (value < list->constraints[i].value);
             break;
-        case CONSTRAIND_LESS_EQUAL:
+        case CONSTRAINT_LESS_EQUAL:
             satisfied = (value <= list->constraints[i].value);
             break;
-        case CONSTRAIND_MORE:
+        case CONSTRAINT_MORE:
             satisfied = (value > list->constraints[i].value);
             break;
-        case CONSTRAIND_MORE_EQUAL:
+        case CONSTRAINT_MORE_EQUAL:
             satisfied = (value >= list->constraints[i].value);
             break;
         default: break;
@@ -101,13 +101,13 @@ long getIntConstraintMaximum(ConstraintList* list) {
     long max = LONG_MAX;
     for (int i = 0; i < list->count; i++) {
         switch (list->constraints[i].kind) {
-        case CONSTRAIND_EQUAL:
-        case CONSTRAIND_LESS_EQUAL:
+        case CONSTRAINT_EQUAL:
+        case CONSTRAINT_LESS_EQUAL:
             if (list->constraints[i].value < max) {
                 max = list->constraints[i].value;
             }
             break;
-        case CONSTRAIND_LESS:
+        case CONSTRAINT_LESS:
             if (list->constraints[i].value - 1 < max) {
                 max = list->constraints[i].value - 1;
             }
@@ -126,7 +126,7 @@ bool areIntConstraintsSatisfiable(ConstraintList* list) {
     for (int i = 0; i < list->count; i++) {
         long value = list->constraints[i].value;
         switch (list->constraints[i].kind) {
-        case CONSTRAIND_EQUAL:
+        case CONSTRAINT_EQUAL:
             if (value > min) {
                 min = value;
             }
@@ -134,26 +134,26 @@ bool areIntConstraintsSatisfiable(ConstraintList* list) {
                 max = value;
             }
             break;
-        case CONSTRAIND_UNEQUAL:
+        case CONSTRAINT_UNEQUAL:
             cannot_be = value;
             unequal = true;
             break;
-        case CONSTRAIND_LESS:
+        case CONSTRAINT_LESS:
             if (value - 1 < max) {
                 max = value - 1;
             }
             break;
-        case CONSTRAIND_LESS_EQUAL:
+        case CONSTRAINT_LESS_EQUAL:
             if (value < max) {
                 max = value;
             }
             break;
-        case CONSTRAIND_MORE:
+        case CONSTRAINT_MORE:
             if (value + 1 > min) {
                 min = value + 1;
             }
             break;
-        case CONSTRAIND_MORE_EQUAL:
+        case CONSTRAINT_MORE_EQUAL:
             if (value > min) {
                 min = value;
             }
@@ -172,7 +172,7 @@ bool areStringConstraintsSatisfiable(ConstraintList* list) {
     for (int i = 0; i < list->count; i++) {
         const char* value = list->constraints[i].string;
         switch (list->constraints[i].kind) {
-        case CONSTRAIND_EQUAL:
+        case CONSTRAINT_EQUAL:
             if (min == NULL || strcmp(value, min) > 0) {
                 min = value;
             }
@@ -180,18 +180,18 @@ bool areStringConstraintsSatisfiable(ConstraintList* list) {
                 max = value;
             }
             break;
-        case CONSTRAIND_UNEQUAL:
+        case CONSTRAINT_UNEQUAL:
             cannot_be = value;
             unequal = true;
             break;
-        case CONSTRAIND_LESS:
-        case CONSTRAIND_LESS_EQUAL:
+        case CONSTRAINT_LESS:
+        case CONSTRAINT_LESS_EQUAL:
             if (max == NULL || strcmp(value, max) < 0) {
                 max = value;
             }
             break;
-        case CONSTRAIND_MORE:
-        case CONSTRAIND_MORE_EQUAL:
+        case CONSTRAINT_MORE:
+        case CONSTRAINT_MORE_EQUAL:
             if (min == NULL || strcmp(value, min) > 0) {
                 min = value;
             }
@@ -206,22 +206,22 @@ Constraint* testAllStringConstraints(ConstraintList* list, const char* value) {
     for (int i = 0; i < list->count; i++) {
         bool satisfied = false;
         switch (list->constraints[i].kind) {
-        case CONSTRAIND_EQUAL:
+        case CONSTRAINT_EQUAL:
             satisfied = (strcmp(value, list->constraints[i].string) == 0);
             break;
-        case CONSTRAIND_UNEQUAL:
+        case CONSTRAINT_UNEQUAL:
             satisfied = (strcmp(value, list->constraints[i].string) != 0);
             break;
-        case CONSTRAIND_LESS:
+        case CONSTRAINT_LESS:
             satisfied = (strcmp(value, list->constraints[i].string) < 0);
             break;
-        case CONSTRAIND_LESS_EQUAL:
+        case CONSTRAINT_LESS_EQUAL:
             satisfied = (strcmp(value, list->constraints[i].string) <= 0);
             break;
-        case CONSTRAIND_MORE:
+        case CONSTRAINT_MORE:
             satisfied = (strcmp(value, list->constraints[i].string) > 0);
             break;
-        case CONSTRAIND_MORE_EQUAL:
+        case CONSTRAINT_MORE_EQUAL:
             satisfied = (strcmp(value, list->constraints[i].string) >= 0);
             break;
         default: break;

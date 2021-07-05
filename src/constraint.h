@@ -4,13 +4,13 @@
 #include <stdbool.h>
 
 typedef enum {
-    CONSTRAIND_EQUAL,
-    CONSTRAIND_UNEQUAL,
-    CONSTRAIND_LESS,
-    CONSTRAIND_LESS_EQUAL,
-    CONSTRAIND_MORE,
-    CONSTRAIND_MORE_EQUAL,
-    CONSTRAIND_COUNT,
+    CONSTRAINT_EQUAL,
+    CONSTRAINT_UNEQUAL,
+    CONSTRAINT_LESS,
+    CONSTRAINT_LESS_EQUAL,
+    CONSTRAINT_MORE,
+    CONSTRAINT_MORE_EQUAL,
+    CONSTRAINT_COUNT,
 } ConstraintKind;
 
 typedef struct {
@@ -23,7 +23,7 @@ typedef struct {
 
 typedef struct {
     int count;
-    Constraint constraints[CONSTRAIND_COUNT];
+    Constraint constraints[CONSTRAINT_COUNT];
 } ConstraintList;
 
 bool includesConstraintKind(ConstraintList* list, ConstraintKind kind);
