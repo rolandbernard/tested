@@ -128,28 +128,28 @@ static bool loadBoolean(const char* line) {
 static void loadIntConstraints(ConstraintList* list, const char* line) {
     while (*line != 0) {
         line = skipSpace(line);
-        Constraint constr = { .kind = CONSTRAIND_EQUAL };
+        Constraint constr = { .kind = CONSTRAINT_EQUAL };
         if (line[0] == '=') {
             line++;
             if (line[0] == '=') {
                 line++;
             }
-            constr.kind = CONSTRAIND_EQUAL;
+            constr.kind = CONSTRAINT_EQUAL;
         } else if (line[0] == '!' && line[1] == '=') {
             line += 2;
-            constr.kind = CONSTRAIND_UNEQUAL;
+            constr.kind = CONSTRAINT_UNEQUAL;
         } else if (line[0] == '>' && line[1] == '=') {
             line += 2;
-            constr.kind = CONSTRAIND_MORE_EQUAL;
+            constr.kind = CONSTRAINT_MORE_EQUAL;
         } else if (line[0] == '>') {
             line++;
-            constr.kind = CONSTRAIND_MORE;
+            constr.kind = CONSTRAINT_MORE;
         } else if (line[0] == '<' && line[1] == '=') {
             line += 2;
-            constr.kind = CONSTRAIND_LESS_EQUAL;
+            constr.kind = CONSTRAINT_LESS_EQUAL;
         } else if (line[0] == '<') {
             line++;
-            constr.kind = CONSTRAIND_LESS;
+            constr.kind = CONSTRAINT_LESS;
         }
         line = skipSpace(line);
         if (*line >= '0' && *line <= '9') {
@@ -164,28 +164,28 @@ static void loadIntConstraints(ConstraintList* list, const char* line) {
 static void loadTimeConstraints(ConstraintList* list, const char* line) {
     while (*line != 0) {
         line = skipSpace(line);
-        Constraint constr = { .kind = CONSTRAIND_EQUAL };
+        Constraint constr = { .kind = CONSTRAINT_EQUAL };
         if (line[0] == '=') {
             line++;
             if (line[0] == '=') {
                 line++;
             }
-            constr.kind = CONSTRAIND_EQUAL;
+            constr.kind = CONSTRAINT_EQUAL;
         } else if (line[0] == '!' && line[1] == '=') {
             line += 2;
-            constr.kind = CONSTRAIND_UNEQUAL;
+            constr.kind = CONSTRAINT_UNEQUAL;
         } else if (line[0] == '>' && line[1] == '=') {
             line += 2;
-            constr.kind = CONSTRAIND_MORE_EQUAL;
+            constr.kind = CONSTRAINT_MORE_EQUAL;
         } else if (line[0] == '>') {
             line++;
-            constr.kind = CONSTRAIND_MORE;
+            constr.kind = CONSTRAINT_MORE;
         } else if (line[0] == '<' && line[1] == '=') {
             line += 2;
-            constr.kind = CONSTRAIND_LESS_EQUAL;
+            constr.kind = CONSTRAINT_LESS_EQUAL;
         } else if (line[0] == '<') {
             line++;
-            constr.kind = CONSTRAIND_LESS;
+            constr.kind = CONSTRAINT_LESS;
         }
         line = skipSpace(line);
         if (*line >= '0' && *line <= '9') {
@@ -198,31 +198,31 @@ static void loadTimeConstraints(ConstraintList* list, const char* line) {
 }
 
 static void loadStringConstraints(ConstraintList* list, const char* line) {
-    Constraint constr = { .kind = CONSTRAIND_COUNT };
+    Constraint constr = { .kind = CONSTRAINT_COUNT };
     if (line[0] == '=') {
         line++;
         if (line[0] == '=') {
             line++;
         }
-        constr.kind = CONSTRAIND_EQUAL;
+        constr.kind = CONSTRAINT_EQUAL;
     } else if (line[0] == '!' && line[1] == '=') {
         line += 2;
-        constr.kind = CONSTRAIND_UNEQUAL;
+        constr.kind = CONSTRAINT_UNEQUAL;
     } else if (line[0] == '>' && line[1] == '=') {
         line += 2;
-        constr.kind = CONSTRAIND_MORE_EQUAL;
+        constr.kind = CONSTRAINT_MORE_EQUAL;
     } else if (line[0] == '>') {
         line++;
-        constr.kind = CONSTRAIND_MORE;
+        constr.kind = CONSTRAINT_MORE;
     } else if (line[0] == '<' && line[1] == '=') {
         line += 2;
-        constr.kind = CONSTRAIND_LESS_EQUAL;
+        constr.kind = CONSTRAINT_LESS_EQUAL;
     } else if (line[0] == '<') {
         line++;
-        constr.kind = CONSTRAIND_LESS;
+        constr.kind = CONSTRAINT_LESS;
     }
-    if (constr.kind == CONSTRAIND_COUNT) {
-        constr.kind = CONSTRAIND_EQUAL;
+    if (constr.kind == CONSTRAINT_COUNT) {
+        constr.kind = CONSTRAINT_EQUAL;
     } else {
         if (isspace(*line)) {
             line++;

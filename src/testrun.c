@@ -116,16 +116,16 @@ static void startRunningCommand(TestRunStatus* test_run, const char* command, co
     }
 }
 
-static void stopCommand(TestRunStatus* test_run, long* elapsed, bool* timedout, int* exitc, int* termsig, char** err, char** out) {
+static void stopCommand(TestRunStatus* test_run, long* elapsed, bool* timedout, int* exit_code, int* termsig, char** err, char** out) {
     test_run->pid = 0;
     if (WIFEXITED(test_run->status)) {
-        *exitc = WEXITSTATUS(test_run->status);
+        *exit_code = WEXITSTATUS(test_run->status);
         *termsig = 0;
     } else if (WIFSIGNALED(test_run->status)) {
-        *exitc = 0;
+        *exit_code = 0;
         *termsig = WTERMSIG(test_run->status);
     } else if (WIFSTOPPED(test_run->status)) {
-        *exitc = 0;
+        *exit_code = 0;
         *termsig = WSTOPSIG(test_run->status);
     }
     if (timedout != NULL) {
@@ -337,17 +337,17 @@ static void signalHandler(int signal) {
 
 static void printState(TestRunStatus* test_runs, int jobs, int passed, int failed) {
     fputc('\n', stderr);
-    fprintf(stderr, "\e[32mtests passed: %i\e[m\n", passed);
-    fprintf(stderr, "\e[31mtests failed: %i\e[m\n", failed);
+    fprintf(stderr, "\e[32mTests passed: %i\e[m\n", passed);
+    fprintf(stderr, "\e[31mTests failed: %i\e[m\n", failed);
     fputc('\n', stderr);
     for (int i = 0; i < jobs; i++) {
         if (test_runs[i].state == TEST_EMPTY) {
-            fprintf(stderr, "task %i: IDLE\n", i);
+            fprintf(stderr, "Process %i: IDLE\n", i);
         } else {
             if (test_runs[i].test->config.run_count > 1) {
-                fprintf(stderr, "task %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
+                fprintf(stderr, "Process %i: %s [%i]\n", i, test_runs[i].test->config.name, test_runs[i].run);
             } else {
-                fprintf(stderr, "task %i: %s\n", i, test_runs[i].test->config.name);
+                fprintf(stderr, "Process %i: %s\n", i, test_runs[i].test->config.name);
             }
         }
     }
@@ -355,7 +355,7 @@ static void printState(TestRunStatus* test_runs, int jobs, int passed, int faile
 }
 
 void runTests(TestList* tests, int jobs, bool progress) {
-    bool istty = isatty(fileno(stderr));
+    bool is_tty = isatty(fileno(stderr));
     TestRunStatus test_runs[jobs];
     for (int i = 0; i < jobs; i++) {
         test_runs[i].state = TEST_EMPTY;
@@ -372,7 +372,7 @@ void runTests(TestList* tests, int jobs, bool progress) {
     int tests_enqueued = 0;
     int tests_run = 0;
     int tests_failed = 0;
-    if (progress && istty) {
+    if (progress && is_tty) {
         printState(test_runs, jobs, tests_run - tests_failed, tests_failed);
     }
     struct timespec sleep = { .tv_sec = 0, .tv_nsec = 1000000 };
@@ -452,7 +452,7 @@ void runTests(TestList* tests, int jobs, bool progress) {
             }
         }
         if (!state_changed) {
-            if (progress && istty && prev_change) {
+            if (progress && is_tty && prev_change) {
                 fprintf(stderr, "\e[%iA\e[J", 5 + jobs);
                 printState(test_runs, jobs, tests_run - tests_failed, tests_failed);
             }
@@ -460,7 +460,7 @@ void runTests(TestList* tests, int jobs, bool progress) {
         }
         prev_change = state_changed;
     }
-    if (progress && istty) {
+    if (progress && is_tty) {
         fprintf(stderr, "\e[%iA\e[J", 5 + jobs);
     }
     signal(SIGCHLD, SIG_DFL);

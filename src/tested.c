@@ -17,7 +17,7 @@ static void printHelp(const char* prog) {
     fprintf(stderr, "  -h --help           print this text\n");
     fprintf(stderr, "  -v --verbose        print more information\n");
     fprintf(stderr, "  -a --all            print informations for all tests\n");
-    fprintf(stderr, "  -P --no-progress    donot print progress information\n");
+    fprintf(stderr, "  -P --no-progress    do not print progress information\n");
 }
 
 static void parseArguments(int argc, const char** argv, TestCaseConfig* def, TestList* tests, int* num_jobs, bool* all, bool* verbose, bool* progress) {
