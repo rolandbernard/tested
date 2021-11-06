@@ -195,7 +195,6 @@ void printTestSummary(TestList* tests, FILE* output) {
             }
         }
     }
-    fputc('\n', output);
     if (is_tty) {
         fprintf(output, "\e[32mTests passed: %i\e[m\n", num_passed);
         fprintf(output, "\e[31mTests failed: %i\e[m\n", num_failed);
@@ -203,5 +202,4 @@ void printTestSummary(TestList* tests, FILE* output) {
         fprintf(output, "Tests passed: %i\n", num_passed);
         fprintf(output, "Tests failed: %i\n", num_failed);
     }
-    fputc('\n', output);
 }
