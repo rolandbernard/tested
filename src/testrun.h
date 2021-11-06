@@ -3,6 +3,6 @@
 
 #include "testcase.h"
 
-void runTests(TestList* tests, int jobs, bool progress);
+void runTests(TestList* tests, int jobs, bool progress, bool tasks);
 
 #endif

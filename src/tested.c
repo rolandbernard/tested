@@ -9,6 +9,14 @@
 #include "testrun.h"
 #include "testprint.h"
 
+typedef struct {
+    int num_jobs;
+    bool all;
+    bool verbose;
+    bool progress;
+    bool tasks;
+} TestedArgs;
+
 static void printHelp(const char* prog) {
     fprintf(stderr, "Usage: %s [options] test...\n", prog);
     fprintf(stderr, "Options:\n");
@@ -18,9 +26,18 @@ static void printHelp(const char* prog) {
     fprintf(stderr, "  -v --verbose        print more information\n");
     fprintf(stderr, "  -a --all            print informations for all tests\n");
     fprintf(stderr, "  -P --no-progress    do not print progress information\n");
+    fprintf(stderr, "  -t --print-tasks          show all currently running tasks\n");
 }
 
-static void parseArguments(int argc, const char** argv, TestCaseConfig* def, TestList* tests, int* num_jobs, bool* all, bool* verbose, bool* progress) {
+static void initDefaultArgs(TestedArgs* args) {
+    args->num_jobs = 1;
+    args->all = false;
+    args->verbose = false;
+    args->progress = true;
+    args->tasks = false;
+}
+
+static void parseArguments(int argc, const char** argv, TestCaseConfig* def, TestList* tests, TestedArgs* args) {
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             if (argv[i][1] == '-') {
@@ -57,7 +74,7 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
                                 break;
                             }
                         }
-                        *num_jobs = jobs;
+                        args->num_jobs = jobs;
                     } else if (argv[i][6] == 0) {
                         i++;
                         int jobs = 0;
@@ -70,18 +87,20 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
                                 break;
                             }
                         }
-                        *num_jobs = jobs;
+                        args->num_jobs = jobs;
                     } else {
                         fprintf(stderr, "unknown option %s\n", argv[i]);
                     }
                 } else if (strcmp(argv[i], "--help") == 0) {
                     printHelp(argv[0]);
                 } else if (strcmp(argv[i], "--verbose") == 0) {
-                    *verbose = true;
+                    args->verbose = true;
                 } else if (strcmp(argv[i], "--no-progress") == 0) {
-                    *progress = false;
+                    args->progress = false;
+                } else if (strcmp(argv[i], "--print-tasks") == 0) {
+                    args->tasks = true;
                 } else if (strcmp(argv[i], "--all") == 0) {
-                    *all = true;
+                    args->all = true;
                 } else {
                     fprintf(stderr, "unknown option %s\n", argv[i]);
                 }
@@ -105,7 +124,7 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
                                 jobs += argv[p][j + 1] - '0';
                                 j++;
                             }
-                            *num_jobs = jobs;
+                            args->num_jobs = jobs;
                         } else {
                             i++;
                             int jobs = 0;
@@ -118,16 +137,18 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
                                     break;
                                 }
                             }
-                            *num_jobs = jobs;
+                            args->num_jobs = jobs;
                         }
                     } else if (argv[p][j] == 'h') {
                         printHelp(argv[0]);
                     } else if (argv[p][j] == 'v') {
-                        *verbose = true;
+                        args->verbose = true;
                     } else if (argv[p][j] == 'P') {
-                        *progress = false;
+                        args->progress = false;
+                    } else if (argv[p][j] == 't') {
+                        args->tasks = true;
                     } else if (argv[p][j] == 'a') {
-                        *all = true;
+                        args->all = true;
                     } else {
                         fprintf(stderr, "unknown option -%c\n", argv[p][j]);
                     }
@@ -140,20 +161,19 @@ static void parseArguments(int argc, const char** argv, TestCaseConfig* def, Tes
 }
 
 int main(int argc, const char** argv) {
-    int num_jobs = 1;
-    bool print_all = false;
-    bool verbose = false;
-    bool progress = true;
+    TestedArgs args;
+    initDefaultArgs(&args);
     TestList tests;
     initTestList(&tests);
     TestCaseConfig def;
     initTestConfig(&def);
-    parseArguments(argc, argv, &def, &tests, &num_jobs, &print_all, &verbose, &progress);
+    parseArguments(argc, argv, &def, &tests, &args);
     deinitTestConfig(&def);
     if (tests.count > 0) {
-        runTests(&tests, num_jobs, progress);
-        printTestResults(&tests, stdout, print_all, verbose);
+        runTests(&tests, args.num_jobs, args.progress, args.tasks);
+        printTestResults(&tests, stdout, args.all, args.verbose);
     }
     deinitTestList(&tests);
     return 0;
 }
+
