@@ -99,7 +99,7 @@ void printTestResult(TestCase* test, FILE* output, bool verbose) {
                     }
                 }
             }
-            if (strlen(test->config.run_command) != 0) {
+            if (strlen(test->config.run_command) != 0 && !test->result.failed_build) {
                 Constraint* constr =
                     testAllIntConstraints(&test->config.time, test->result.runtime);
                 if (test->result.out_of_runtime) {
