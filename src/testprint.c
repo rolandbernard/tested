@@ -153,7 +153,7 @@ void printTestResult(TestCase* test, FILE* output, bool verbose) {
             }
             if (strlen(test->config.cleanup_command) != 0) {
                 if (test->result.failed_cleanup) {
-                    if (test->result.buildexit != 0) {
+                    if (test->result.cleanupexit != 0) {
                         fprintf(
                             output, "--> Cleanup failed with non zero exit code %i\n",
                             test->result.cleanupexit
