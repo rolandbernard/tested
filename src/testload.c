@@ -233,76 +233,102 @@ static void loadStringConstraints(ConstraintList* list, const char* line) {
 }
 
 static void loadLine(TestCaseConfig* config, const char* line) {
+    const char* value;
     line = skipSpace(line);
     if (strncmp(line, "test", 4) == 0) {
-        line = skipToValue(line + 4);
-        if (line != NULL) {
+        value = skipToValue(line + 4);
+        if (value != NULL) {
             free(config->name);
-            config->name = loadString(line);
+            config->name = loadString(value);
+            return;
         }
-    } else if (strncmp(line, "runs", 4) == 0) {
-        line = skipToValue(line + 4);
-        if (line != NULL) {
-            config->run_count = loadInteger(line, NULL);
+    } 
+    if (strncmp(line, "runs", 4) == 0) {
+        value = skipToValue(line + 4);
+        if (value != NULL) {
+            config->run_count = loadInteger(value, NULL);
+            return;
         }
-    } else if (strncmp(line, "build", 5) == 0) {
-        line = skipToValue(line + 5);
-        if (line != NULL) {
+    }
+    if (strncmp(line, "build", 5) == 0) {
+        value = skipToValue(line + 5);
+        if (value != NULL) {
             free(config->build_command);
-            config->build_command = loadString(line);
+            config->build_command = loadString(value);
+            return;
         }
-    } else if (strncmp(line, "run", 3) == 0) {
-        line = skipToValue(line + 3);
-        if (line != NULL) {
+    }
+    if (strncmp(line, "run", 3) == 0) {
+        value = skipToValue(line + 3);
+        if (value != NULL) {
             free(config->run_command);
-            config->run_command = loadString(line);
+            config->run_command = loadString(value);
+            return;
         }
-    } else if (strncmp(line, "cleanup", 7) == 0) {
-        line = skipToValue(line + 7);
-        if (line != NULL) {
+    }
+    if (strncmp(line, "cleanup", 7) == 0) {
+        value = skipToValue(line + 7);
+        if (value != NULL) {
             free(config->cleanup_command);
-            config->cleanup_command = loadString(line);
+            config->cleanup_command = loadString(value);
+            return;
         }
-    } else if (strncmp(line, "stdin", 5) == 0) {
-        line = skipToValue(line + 5);
-        if (line != NULL) {
+    }
+    if (strncmp(line, "stdin", 5) == 0) {
+        value = skipToValue(line + 5);
+        if (value != NULL) {
             free(config->in);
-            config->in = loadString(line);
+            config->in = loadString(value);
+            return;
         }
-    } else if (strncmp(line, "timesout", 8) == 0) {
-        line = skipToValue(line + 8);
-        if (line != NULL) {
-            config->times_out = loadBoolean(line);
+    }
+    if (strncmp(line, "timesout", 8) == 0) {
+        value = skipToValue(line + 8);
+        if (value != NULL) {
+            config->times_out = loadBoolean(value);
+            return;
         }
-    } else if (strncmp(line, "buildtimesout", 13) == 0) {
-        line = skipToValue(line + 13);
-        if (line != NULL) {
-            config->times_out_build = loadBoolean(line);
+    }
+    if (strncmp(line, "buildtimesout", 13) == 0) {
+        value = skipToValue(line + 13);
+        if (value != NULL) {
+            config->times_out_build = loadBoolean(value);
+            return;
         }
-    } else if (strncmp(line, "buildtime", 9) == 0) {
-        line = skipToValue(line + 9);
-        if (line != NULL) {
-            loadTimeConstraints(&config->buildtime, line);
+    }
+    if (strncmp(line, "buildtime", 9) == 0) {
+        value = skipToValue(line + 9);
+        if (value != NULL) {
+            loadTimeConstraints(&config->buildtime, value);
+            return;
         }
-    } else if (strncmp(line, "time", 4) == 0) {
-        line = skipToValue(line + 4);
-        if (line != NULL) {
-            loadTimeConstraints(&config->time, line);
+    }
+    if (strncmp(line, "time", 4) == 0) {
+        value = skipToValue(line + 4);
+        if (value != NULL) {
+            loadTimeConstraints(&config->time, value);
+            return;
         }
-    } else if (strncmp(line, "exit", 4) == 0) {
-        line = skipToValue(line + 4);
-        if (line != NULL) {
-            loadIntConstraints(&config->exit, line);
+    }
+    if (strncmp(line, "exit", 4) == 0) {
+        value = skipToValue(line + 4);
+        if (value != NULL) {
+            loadIntConstraints(&config->exit, value);
+            return;
         }
-    } else if (strncmp(line, "stderr", 6) == 0) {
-        line = skipToValue(line + 6);
-        if (line != NULL) {
-            loadStringConstraints(&config->err, line);
+    }
+    if (strncmp(line, "stderr", 6) == 0) {
+        value = skipToValue(line + 6);
+        if (value != NULL) {
+            loadStringConstraints(&config->err, value);
+            return;
         }
-    } else if (strncmp(line, "stdout", 6) == 0) {
-        line = skipToValue(line + 6);
-        if (line != NULL) {
-            loadStringConstraints(&config->out, line);
+    }
+    if (strncmp(line, "stdout", 6) == 0) {
+        value = skipToValue(line + 6);
+        if (value != NULL) {
+            loadStringConstraints(&config->out, value);
+            return;
         }
     }
 }
