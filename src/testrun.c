@@ -99,7 +99,6 @@ static void startRunningCommand(TestRunStatus* test_run, const char* command, co
     if (in != NULL) {
         write(pipes[0][1], in, strlen(in));
     }
-    close(pipes[0][1]);
     gettimeofday(&test_run->start_time, NULL);
     int pid = fork();
     if (pid < 0) {

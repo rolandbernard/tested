@@ -96,8 +96,32 @@ static char* loadString(const char* line) {
     for (int i = 0; line[i] != 0; i++) {
         if (line[i] == '\\') {
             switch (line[i + 1]) {
+            case '0':
+                ret[len] = '\0';
+                break;
+            case 'a':
+                ret[len] = '\a';
+                break;
+            case 'b':
+                ret[len] = '\b';
+                break;
+            case 't':
+                ret[len] = '\t';
+                break;
             case 'n':
                 ret[len] = '\n';
+                break;
+            case 'v':
+                ret[len] = '\v';
+                break;
+            case 'f':
+                ret[len] = '\f';
+                break;
+            case 'r':
+                ret[len] = '\r';
+                break;
+            case 'e':
+                ret[len] = '\e';
                 break;
             default:
                 if (line[i + 1] != 0) {
