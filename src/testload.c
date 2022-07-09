@@ -126,6 +126,8 @@ static char* loadString(const char* line) {
             default:
                 if (line[i + 1] != 0) {
                     ret[len] = line[i + 1];
+                } else {
+                    ret[len] = '?';
                 }
                 break;
             }

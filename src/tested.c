@@ -21,12 +21,12 @@ static void printHelp(const char* prog) {
     fprintf(stderr, "Usage: %s [options] test...\n", prog);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -c --config=CONFIG\n");
-    fprintf(stderr, "  -j --jobs=JOBS      number of parallel threads\n");
-    fprintf(stderr, "  -h --help           print this text\n");
-    fprintf(stderr, "  -v --verbose        print more information\n");
-    fprintf(stderr, "  -a --all            print informations for all tests\n");
-    fprintf(stderr, "  -P --no-progress    do not print progress information\n");
-    fprintf(stderr, "  -t --print-tasks          show all currently running tasks\n");
+    fprintf(stderr, "  -j --jobs=JOBS       number of parallel threads\n");
+    fprintf(stderr, "  -h --help            print this text\n");
+    fprintf(stderr, "  -v --verbose         print more information\n");
+    fprintf(stderr, "  -a --all             print informations for all tests\n");
+    fprintf(stderr, "  -P --no-progress     do not print progress information\n");
+    fprintf(stderr, "  -t --print-tasks     show all currently running tasks\n");
 }
 
 static void initDefaultArgs(TestedArgs* args) {
