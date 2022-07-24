@@ -203,3 +203,15 @@ void printTestSummary(TestList* tests, FILE* output) {
         fprintf(output, "Tests failed: %i\n", num_failed);
     }
 }
+
+bool hasFailedTests(TestList* tests) {
+    for (int i = 0; i < tests->count; i++) {
+        if (tests->tests[i].result.completed) {
+            if (tests->tests[i].result.failed) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+

@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "testcase.h"
 #include "testsearch.h"
@@ -173,7 +174,8 @@ int main(int argc, const char** argv) {
         runTests(&tests, args.num_jobs, args.progress, args.tasks);
         printTestResults(&tests, stdout, args.all, args.verbose);
     }
+    bool fail = hasFailedTests(&tests);
     deinitTestList(&tests);
-    return 0;
+    return fail ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

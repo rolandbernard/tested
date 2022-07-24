@@ -11,4 +11,6 @@ void printTestResults(TestList* tests, FILE* output, bool all, bool verbose);
 
 void printTestSummary(TestList* tests, FILE* output);
 
+bool hasFailedTests(TestList* tests);
+
 #endif
